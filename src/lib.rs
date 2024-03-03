@@ -7,6 +7,7 @@ pub mod follow_camera;
 pub mod health;
 mod loading;
 mod menu;
+pub mod pause_menu;
 mod player;
 pub mod weapon;
 
@@ -16,7 +17,6 @@ use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
 
-use bevy::app::App;
 #[cfg(debug_assertions)]
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
@@ -24,6 +24,7 @@ use bevy_rand::{plugin::EntropyPlugin, prelude::WyRand};
 use enemy::EnemyPlugin;
 use follow_camera::FollowCameraPlugin;
 use health::HealthPlugin;
+use pause_menu::PausePlugin;
 use weapon::WeaponPlugin;
 
 // This example game uses States to separate logic
@@ -38,6 +39,8 @@ enum GameState {
     Playing,
     // Here the menu is drawn and waiting for player interaction
     Menu,
+    /// The game is paused
+    Paused,
 }
 
 pub struct GamePlugin;
@@ -55,6 +58,7 @@ impl Plugin for GamePlugin {
             FollowCameraPlugin,
             HealthPlugin,
             WeaponPlugin,
+            PausePlugin,
         ));
 
         #[cfg(debug_assertions)]
