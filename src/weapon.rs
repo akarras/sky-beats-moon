@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use crate::{
     enemy::Enemy,
     health::{DamageEvent, DespawnTimer, Health},
+    loading::TextureAssets,
     player::Player,
     GameState,
 };
@@ -21,6 +22,7 @@ impl Plugin for WeaponPlugin {
                 apply_velocity,
                 check_bullet_collisions,
                 update_player_target,
+                shoot_machine_gun,
             )
                 .run_if(in_state(GameState::Playing)),
         );
@@ -56,7 +58,7 @@ pub struct Target(pub Option<Entity>);
 
 /// The current vector that the target is located at
 #[derive(Component)]
-pub struct TargetVector(Option<Vec2>);
+pub struct TargetVector(pub Option<Vec2>);
 
 /// just tries to target the closest enemy
 fn update_player_target(
@@ -181,6 +183,75 @@ fn update_target_vectors(
                     let direction_2d = Vec2::new(direction.x, direction.y);
                     vector.0 = (1000.0 * 1000.0 > direction_2d.length_squared())
                         .then(|| direction_2d.normalize());
+                }
+            }
+        });
+}
+
+#[derive(Component)]
+pub struct MachineGun {
+    level: u8,
+    cooldown_remaining: f32,
+}
+
+impl MachineGun {
+    pub fn new(level: u8) -> Self {
+        MachineGun {
+            level: level,
+            cooldown_remaining: 0.5,
+        }
+    }
+
+    fn cooldown(&self) -> f32 {
+        match self.level {
+            0 => 0.5,
+            1 => 0.5,
+            2 => 0.4,
+            3 => 0.3,
+            4 => 0.2,
+            5 => 0.1,
+            _ => 0.0,
+        }
+    }
+
+    fn damage(&self) -> i32 {
+        match self.level {
+            0..=2 => 2,
+            3..=5 => 5,
+            _ => 6,
+        }
+    }
+}
+
+fn shoot_machine_gun(
+    mut commands: Commands,
+    mut machine_gun: Query<(Entity, &TargetVector, &mut MachineGun, &Transform)>,
+    textures: Res<TextureAssets>,
+    time: Res<Time>,
+) {
+    let dt = time.delta_seconds();
+    machine_gun
+        .iter_mut()
+        .for_each(|(fired_by, vector, mut gun, transform)| {
+            if let Some(target_vector) = vector.0 {
+                if gun.cooldown_remaining <= 0.0 {
+                    gun.cooldown_remaining = gun.cooldown();
+                    commands.spawn((
+                        SpriteBundle {
+                            texture: textures.bullet.clone(),
+                            transform: transform.with_scale(Vec3::new(0.7, 0.7, 0.7)),
+                            ..Default::default()
+                        },
+                        Projectile {
+                            fired_by,
+                            damage_amount: gun.damage(),
+                            size: 25.0,
+                        },
+                        Velocity(target_vector * 125.0),
+                        Health(2),
+                    ));
+                } else {
+                    gun.cooldown_remaining -= dt;
                 }
             }
         });

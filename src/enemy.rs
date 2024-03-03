@@ -8,7 +8,8 @@ use crate::{
     health::{DeathEvent, DespawnTimer, Health, MaxHealth},
     loading::TextureAssets,
     player::Player,
-    weapon::{Coord2D, Target, Velocity, Weapon},
+    power_ups::{PowerUpType, Powerup, Powerups},
+    weapon::{Coord2D, Target, TargetVector, Velocity},
     GameState,
 };
 
@@ -107,11 +108,19 @@ fn spawn_enemies(
                     Velocity(Vec2::new(-x, -y)),
                     MaxHealth(5),
                     Health(5),
-                    Weapon {
-                        cooldown: 1.0,
-                        cooldown_left: 1.0,
-                    },
+                    Powerups([
+                        Some(Powerup {
+                            power: PowerUpType::MachineGun,
+                            level: 1,
+                        }),
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                    ]),
                     Target(Some(player.0)),
+                    TargetVector(None),
                 ));
             }
         }

@@ -1,7 +1,8 @@
 use crate::actions::Actions;
 use crate::health::{DespawnTimer, Health, MaxHealth};
 use crate::loading::TextureAssets;
-use crate::weapon::{Target, Velocity, Weapon};
+use crate::power_ups::Powerups;
+use crate::weapon::{Target, TargetVector, Velocity, Weapon};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -25,7 +26,11 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
+fn spawn_player(
+    mut commands: Commands,
+    textures: Res<TextureAssets>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
     commands
         .spawn((
             SpriteBundle {
@@ -39,11 +44,14 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
                 cooldown_left: 1.0,
             },
             Target(None),
+            TargetVector(None),
             MaxHealth(10000000),
             Health(10000000),
             Velocity(Vec2::new(0.0, 100.0)),
+            Powerups::default(),
         ))
         .insert(Player);
+    next_state.set(GameState::Chooser);
 }
 
 fn move_player(

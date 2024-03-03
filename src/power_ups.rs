@@ -4,7 +4,11 @@ use enum_iterator::{all, Sequence};
 use rand::{seq::SliceRandom, Rng};
 
 use crate::{
-    enemy::Enemy, health::DeathEvent, loading::TextureAssets, player::Player, weapon::Coord2D,
+    enemy::Enemy,
+    health::DeathEvent,
+    loading::TextureAssets,
+    player::Player,
+    weapon::{Coord2D, MachineGun},
     GameState,
 };
 
@@ -14,8 +18,11 @@ impl Plugin for PowerupPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (spawn_pickup, player_pickup).run_if(in_state(GameState::Playing)),
-        );
+            (spawn_pickup, player_pickup, powerup_manager).run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(OnEnter(GameState::Chooser), add_choice_menu)
+        .add_systems(OnExit(GameState::Chooser), remove_choice_menu)
+        .add_systems(Update, choices.run_if(in_state(GameState::Chooser)));
     }
 }
 
@@ -27,36 +34,39 @@ fn spawn_pickup(
     assets: Res<TextureAssets>,
     mut death_events: EventReader<DeathEvent>,
     enemies: Query<&Transform, With<Enemy>>,
+    mut rand: ResMut<GlobalEntropy<WyRand>>,
 ) {
     for death in death_events.read() {
         // look for where the enemies body is
         let entity = death.0;
         if let Ok(position) = enemies.get(entity) {
-            commands.spawn((
-                SpriteBundle {
-                    texture: assets.bevy.clone(),
-                    transform: *position,
-                    ..Default::default()
-                },
-                Pickup,
-            ));
+            if rand.gen_bool(0.3) {
+                commands.spawn((
+                    SpriteBundle {
+                        texture: assets.bevy.clone(),
+                        transform: *position,
+                        ..Default::default()
+                    },
+                    Pickup,
+                ));
+            }
         }
     }
 }
 
 #[derive(Component)]
-struct ChooserMenu;
+struct ChoiceMenu;
 
 #[derive(Component)]
 struct Choice(PowerUpType);
 
 fn player_pickup(
     mut commands: Commands,
-    mut players: Query<(&mut Powerups, &Transform), With<Player>>,
+    players: Query<&Transform, With<Player>>,
     pickups: Query<(Entity, &Transform), With<Pickup>>,
-    mut rand: ResMut<GlobalEntropy<WyRand>>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
-    for (powerup, player) in players.iter_mut() {
+    for player in players.iter() {
         for (pickup, pickup_location) in pickups.iter() {
             // check if they overlap
             if (*Coord2D::from(player.translation) - *Coord2D::from(pickup_location.translation))
@@ -64,60 +74,47 @@ fn player_pickup(
                 < 100.0
             {
                 commands.entity(pickup).despawn();
-                // if the user has no slots left, we should show just the items that they have
-                // otherwise, we should backfill with other types of items to choose from
-                let mut choices = powerup.current_powerups().collect::<Vec<_>>();
-                let unused = powerup.get_unused_powerup_types();
-                let unused_slots = powerup.unused_slots();
-                for _num in 0..unused_slots {
-                    let mut unused = unused.clone();
-                    choices.append(&mut unused);
-                }
-                let rand = &mut *rand;
-                let choices = choices.choose_multiple(rand, 3);
-                commands
-                    .spawn((
-                        NodeBundle {
-                            style: Style {
-                                align_items: AlignItems::Center,
-                                justify_items: JustifyItems::Center,
-                                width: Val::Percent(100.0),
-                                height: Val::Percent(100.0),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ChooserMenu,
-                    ))
-                    .with_children(|c| {
-                        for choice in choices {
-                            c.spawn((
-                                ButtonBundle {
-                                    background_color: BackgroundColor(Color::rgb(1.0, 0.0, 0.0)),
-                                    ..Default::default()
-                                },
-                                Choice(*choice),
-                            ))
-                            .with_children(|c| {
-                                c.spawn(TextBundle::from_section(
-                                    format!("{:?}", choice),
-                                    TextStyle {
-                                        font_size: 20.0,
-                                        ..Default::default()
-                                    },
-                                ));
-                            });
-                        }
-                    });
+                next_state.set(GameState::Chooser);
             }
         }
     }
 }
 
-fn choices(mut commands: Commands, buttons: Query<(Interaction, Choice), Changed<Interaction>>) {}
+fn choices(
+    buttons: Query<(&Interaction, &Choice), Changed<Interaction>>,
+    mut player: Query<&mut Powerups, With<Player>>,
+    mut state: ResMut<NextState<GameState>>,
+) {
+    for (button, choice) in buttons.iter() {
+        match button {
+            Interaction::Pressed => {
+                let mut player = player.single_mut();
+                player.add_powerup(choice.0);
+                state.set(GameState::Playing);
+            }
+            _ => {}
+        }
+    }
+}
 
-#[derive(Component)]
-struct Powerups([Option<Powerup>; 6]);
+#[derive(Component, Default)]
+pub struct Powerups(pub [Option<Powerup>; 6]);
+
+fn powerup_manager(
+    mut commands: Commands,
+    powerups: Query<(Entity, &Powerups), Changed<Powerups>>,
+) {
+    for (entity, powerups) in &powerups {
+        for powerup in powerups.0.iter().flatten() {
+            let level = powerup.level;
+            let mut entity = commands.entity(entity);
+            info!("updating powerups");
+            match powerup.power {
+                PowerUpType::MachineGun => entity.insert(MachineGun::new(level)),
+            };
+        }
+    }
+}
 
 impl Powerups {
     fn unused_slots(&self) -> usize {
@@ -138,6 +135,22 @@ impl Powerups {
             .find(|power| power.power == power_type)
     }
 
+    fn add_powerup(&mut self, power_type: PowerUpType) {
+        if let Some(power) = self.get_powerup_mut(power_type) {
+            power.level += 1;
+        } else {
+            for item in self.0.iter_mut() {
+                if item.is_none() {
+                    *item = Some(Powerup {
+                        power: power_type,
+                        level: 1,
+                    });
+                    break;
+                }
+            }
+        }
+    }
+
     fn current_powerups(&self) -> impl Iterator<Item = PowerUpType> + '_ {
         self.0.iter().flatten().map(|t| t.power)
     }
@@ -149,46 +162,105 @@ impl Powerups {
     }
 }
 
-struct Powerup {
-    power: PowerUpType,
-    level: u8,
+fn add_choice_menu(
+    mut commands: Commands,
+    mut rand: ResMut<GlobalEntropy<WyRand>>,
+    mut player: Query<&mut Powerups, With<Player>>,
+) {
+    // if the user has no slots left, we should show just the items that they have
+    // otherwise, we should backfill with other types of items to choose from
+    let powerup = player.single_mut();
+    let mut choices = powerup.current_powerups().collect::<Vec<_>>();
+    let unused = powerup.get_unused_powerup_types();
+    let unused_slots = powerup.unused_slots();
+    for _num in 0..unused_slots {
+        let mut unused = unused.clone();
+        choices.append(&mut unused);
+    }
+    let rand = &mut *rand;
+    let choices = choices.choose_multiple(rand, 3);
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    align_items: AlignItems::Center,
+                    justify_items: JustifyItems::Center,
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ChoiceMenu,
+        ))
+        .with_children(|c| {
+            for choice in choices {
+                c.spawn((
+                    ButtonBundle {
+                        background_color: BackgroundColor(Color::rgb(1.0, 0.0, 0.0)),
+                        ..Default::default()
+                    },
+                    Choice(*choice),
+                ))
+                .with_children(|c| {
+                    c.spawn(TextBundle::from_section(
+                        format!("{:?}", choice),
+                        TextStyle {
+                            font_size: 20.0,
+                            ..Default::default()
+                        },
+                    ));
+                });
+            }
+        });
+}
+
+fn remove_choice_menu(mut commands: Commands, menu: Query<Entity, With<ChoiceMenu>>) {
+    for menu in menu.iter() {
+        commands.entity(menu).despawn_recursive();
+    }
+}
+
+pub struct Powerup {
+    pub power: PowerUpType,
+    pub level: u8,
 }
 
 /// [`PowerUpType`] is just an enumeration of each type of powerup that a ship can have- players and enemies share these power ups
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Sequence)]
-enum PowerUpType {
-    /// Shoots a single blob
-    PeaShooter,
+pub enum PowerUpType {
+    // /// Shoots a single blob
+    // PeaShooter,
     /// Shoots a constant barrage of fire
     MachineGun,
-    /// Passes through multiple enemies and curves back to you
-    Boomerrang,
-    /// Follows the heat signature of an enemy and explodes
-    HeatSeeker,
-    /// Drops a giant nuke directly ontop of you
-    TacticalNuke,
-    /// Fires a beam directly in front of you
-    LazerCannon,
-    /// Sprays small leaves that enemies slip on
-    LeafBlower,
-    /// Stationary floating mines that enemies run over
-    AirMines,
-    /// Companion drones that fire pea shooters separately
-    Drones,
-    /// Heals self gradually
-    Nanobots,
-    /// prevents the enemy from targeting you while active
-    Flares,
-    /// Adds extra health ontop of your current shield
-    Overshield,
-    /// Adds total health
-    Armor,
-    /// Duplicates yourself and copies all weapons
-    Squadron,
-    /// Increases the number of projectiles
-    ExtraProjectile,
-    /// Increases targeting distance
-    SatelliteSupport,
-    /// Increases movement speed
-    EnergySoda,
+    // /// Passes through multiple enemies and curves back to you
+    // Boomerrang,
+    // /// Follows the heat signature of an enemy and explodes
+    // HeatSeeker,
+    // /// Drops a giant nuke directly ontop of you
+    // TacticalNuke,
+    // /// Fires a beam directly in front of you
+    // LazerCannon,
+    // /// Sprays small leaves that enemies slip on
+    // LeafBlower,
+    // /// Stationary floating mines that enemies run over
+    // AirMines,
+    // /// Companion drones that fire pea shooters separately
+    // Drones,
+    // /// Heals self gradually
+    // Nanobots,
+    // /// prevents the enemy from targeting you while active
+    // Flares,
+    // /// Adds extra health ontop of your current shield
+    // Overshield,
+    // /// Adds total health
+    // Armor,
+    // /// Duplicates yourself and copies all weapons
+    // Squadron,
+    // /// Increases the number of projectiles
+    // ExtraProjectile,
+    // /// Increases targeting distance
+    // SatelliteSupport,
+    // /// Increases movement speed
+    // EnergySoda,
 }

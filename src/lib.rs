@@ -45,6 +45,8 @@ enum GameState {
     Menu,
     /// The game is paused
     Paused,
+    /// The player is choosing an item
+    Chooser,
 }
 
 pub struct GamePlugin;
