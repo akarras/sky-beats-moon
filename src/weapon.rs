@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     enemy::Enemy,
-    health::{DamageEvent, DespawnTimer, Health},
+    health::{DamageEvent, Dead, DespawnTimer, Health},
     loading::TextureAssets,
     player::Player,
     GameState,
@@ -22,7 +22,8 @@ impl Plugin for WeaponPlugin {
                 apply_velocity,
                 check_bullet_collisions,
                 update_player_target,
-                shoot_machine_gun,
+                shoot_basic_gun::<MachineGun>,
+                shoot_basic_gun::<PeaShooter>,
             )
                 .run_if(in_state(GameState::Playing)),
         );
@@ -188,6 +189,15 @@ fn update_target_vectors(
         });
 }
 
+trait BasicGun {
+    fn cooldown(&self) -> f32;
+    fn damage(&self) -> i32;
+    fn projectile_velocity(&self) -> f32;
+    fn projectile_sprite(assets: &Res<TextureAssets>) -> Handle<Image>;
+    fn cooldown_remaining(&mut self) -> &mut f32;
+    fn health(&self) -> i32;
+}
+
 #[derive(Component)]
 pub struct MachineGun {
     level: u8,
@@ -201,7 +211,9 @@ impl MachineGun {
             cooldown_remaining: 0.5,
         }
     }
+}
 
+impl BasicGun for MachineGun {
     fn cooldown(&self) -> f32 {
         match self.level {
             0 => 0.5,
@@ -221,38 +233,185 @@ impl MachineGun {
             _ => 6,
         }
     }
+
+    fn projectile_velocity(&self) -> f32 {
+        150.0
+    }
+
+    fn projectile_sprite(assets: &Res<TextureAssets>) -> Handle<Image> {
+        assets.bullet.clone()
+    }
+
+    fn cooldown_remaining(&mut self) -> &mut f32 {
+        &mut self.cooldown_remaining
+    }
+
+    fn health(&self) -> i32 {
+        2
+    }
 }
 
-fn shoot_machine_gun(
+#[derive(Component)]
+pub struct PeaShooter {
+    level: u8,
+    cooldown_remaining: f32,
+}
+
+impl PeaShooter {
+    pub fn new(level: u8) -> Self {
+        PeaShooter {
+            level: level,
+            cooldown_remaining: 0.5,
+        }
+    }
+}
+
+impl BasicGun for PeaShooter {
+    fn cooldown(&self) -> f32 {
+        match self.level {
+            0 => 1.0,
+            1 => 1.0,
+            2 => 1.0,
+            3 => 1.0,
+            4 => 1.0,
+            5 => 1.0,
+            _ => 0.0,
+        }
+    }
+
+    fn damage(&self) -> i32 {
+        match self.level {
+            0..=2 => 5,
+            3..=5 => 10,
+            _ => 6,
+        }
+    }
+
+    fn projectile_velocity(&self) -> f32 {
+        200.0
+    }
+
+    fn projectile_sprite(assets: &Res<TextureAssets>) -> Handle<Image> {
+        assets.pea.clone()
+    }
+
+    fn cooldown_remaining(&mut self) -> &mut f32 {
+        &mut self.cooldown_remaining
+    }
+
+    fn health(&self) -> i32 {
+        100
+    }
+}
+
+#[derive(Component)]
+pub struct Sniper {
+    level: u8,
+    cooldown_remaining: f32,
+}
+
+impl Sniper {
+    pub fn new(level: u8) -> Self {
+        Sniper {
+            level: level,
+            cooldown_remaining: 0.5,
+        }
+    }
+}
+
+impl BasicGun for Sniper {
+    fn cooldown(&self) -> f32 {
+        match self.level {
+            0 => 5.0,
+            1 => 5.0,
+            2 => 5.0,
+            3 => 5.0,
+            4 => 5.0,
+            5 => 5.0,
+            _ => 0.0,
+        }
+    }
+
+    fn damage(&self) -> i32 {
+        match self.level {
+            0..=2 => 100,
+            3..=5 => 100,
+            _ => 6,
+        }
+    }
+
+    fn projectile_velocity(&self) -> f32 {
+        1500.0
+    }
+
+    fn health(&self) -> i32 {
+        500
+    }
+
+    fn projectile_sprite(assets: &Res<TextureAssets>) -> Handle<Image> {
+        assets.bullet.clone()
+    }
+
+    fn cooldown_remaining(&mut self) -> &mut f32 {
+        &mut self.cooldown_remaining
+    }
+}
+
+fn shoot_basic_gun<T>(
     mut commands: Commands,
-    mut machine_gun: Query<(Entity, &TargetVector, &mut MachineGun, &Transform)>,
+    mut machine_gun: Query<
+        (
+            Entity,
+            &TargetVector,
+            &mut T,
+            &Transform,
+            Option<&SpecialMunitions>,
+        ),
+        Without<Dead>,
+    >,
     textures: Res<TextureAssets>,
     time: Res<Time>,
-) {
+) where
+    T: Component + BasicGun + Sized,
+{
     let dt = time.delta_seconds();
     machine_gun
         .iter_mut()
-        .for_each(|(fired_by, vector, mut gun, transform)| {
+        .for_each(|(fired_by, vector, mut gun, transform, munitions)| {
             if let Some(target_vector) = vector.0 {
-                if gun.cooldown_remaining <= 0.0 {
-                    gun.cooldown_remaining = gun.cooldown();
+                if *gun.cooldown_remaining() <= 0.0 {
+                    *gun.cooldown_remaining() = gun.cooldown();
                     commands.spawn((
                         SpriteBundle {
-                            texture: textures.bullet.clone(),
+                            texture: T::projectile_sprite(&textures),
                             transform: transform.with_scale(Vec3::new(0.7, 0.7, 0.7)),
                             ..Default::default()
                         },
                         Projectile {
                             fired_by,
-                            damage_amount: gun.damage(),
+                            damage_amount: gun.damage()
+                                * munitions.map(|m| m.damage_mult()).unwrap_or(1),
                             size: 25.0,
                         },
-                        Velocity(target_vector * 125.0),
-                        Health(2),
+                        Velocity(target_vector * gun.projectile_velocity()),
+                        Health(gun.health()),
                     ));
                 } else {
-                    gun.cooldown_remaining -= dt;
+                    *gun.cooldown_remaining() -= dt;
                 }
             }
         });
+}
+
+#[derive(Component)]
+pub struct SpecialMunitions(u8);
+
+impl SpecialMunitions {
+    pub fn new(level: u8) -> Self {
+        Self(level)
+    }
+
+    fn damage_mult(&self) -> i32 {
+        self.0 as i32
+    }
 }

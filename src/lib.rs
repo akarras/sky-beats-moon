@@ -2,6 +2,7 @@
 
 mod actions;
 mod audio;
+mod clouds;
 pub mod enemy;
 pub mod follow_camera;
 pub mod health;
@@ -23,6 +24,7 @@ use crate::player::PlayerPlugin;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy_rand::{plugin::EntropyPlugin, prelude::WyRand};
+use clouds::CloudPlugin;
 use enemy::EnemyPlugin;
 use follow_camera::FollowCameraPlugin;
 use health::HealthPlugin;
@@ -67,6 +69,7 @@ impl Plugin for GamePlugin {
             PausePlugin,
             WavesPlugin,
             PowerupPlugin,
+            CloudPlugin,
         ));
 
         #[cfg(debug_assertions)]

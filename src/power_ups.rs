@@ -8,7 +8,7 @@ use crate::{
     health::DeathEvent,
     loading::TextureAssets,
     player::Player,
-    weapon::{Coord2D, MachineGun},
+    weapon::{Coord2D, MachineGun, PeaShooter, Sniper, SpecialMunitions},
     GameState,
 };
 
@@ -111,6 +111,9 @@ fn powerup_manager(
             info!("updating powerups");
             match powerup.power {
                 PowerUpType::MachineGun => entity.insert(MachineGun::new(level)),
+                PowerUpType::PeaShooter => entity.insert(PeaShooter::new(level)),
+                PowerUpType::Sniper => entity.insert(Sniper::new(level)),
+                PowerUpType::SpecialMunitions => entity.insert(SpecialMunitions::new(level)),
             };
         }
     }
@@ -185,19 +188,28 @@ fn add_choice_menu(
                 style: Style {
                     align_items: AlignItems::Center,
                     justify_items: JustifyItems::Center,
+                    flex_direction: FlexDirection::Column,
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     ..Default::default()
                 },
+                background_color: BackgroundColor(Color::rgb(0.8, 0.4, 0.0)),
                 ..Default::default()
             },
             ChoiceMenu,
         ))
         .with_children(|c| {
+            c.spawn(TextBundle::from_section(
+                "Choose a powerup!",
+                TextStyle {
+                    font_size: 32.0,
+                    ..Default::default()
+                },
+            ));
             for choice in choices {
                 c.spawn((
                     ButtonBundle {
-                        background_color: BackgroundColor(Color::rgb(1.0, 0.0, 0.0)),
+                        background_color: BackgroundColor(Color::rgb(0.0, 0.3, 0.0)),
                         ..Default::default()
                     },
                     Choice(*choice),
@@ -230,9 +242,11 @@ pub struct Powerup {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Sequence)]
 pub enum PowerUpType {
     // /// Shoots a single blob
-    // PeaShooter,
+    PeaShooter,
     /// Shoots a constant barrage of fire
     MachineGun,
+    /// Shoots a single high power bullet
+    Sniper,
     // /// Passes through multiple enemies and curves back to you
     // Boomerrang,
     // /// Follows the heat signature of an enemy and explodes
@@ -253,14 +267,15 @@ pub enum PowerUpType {
     // Flares,
     // /// Adds extra health ontop of your current shield
     // Overshield,
-    // /// Adds total health
-    // Armor,
-    // /// Duplicates yourself and copies all weapons
-    // Squadron,
-    // /// Increases the number of projectiles
-    // ExtraProjectile,
-    // /// Increases targeting distance
-    // SatelliteSupport,
-    // /// Increases movement speed
-    // EnergySoda,
+    /// Increases the damage of all weapons
+    SpecialMunitions, // /// Adds total health
+                      // Armor,
+                      // /// Duplicates yourself and copies all weapons
+                      // Squadron,
+                      // /// Increases the number of projectiles
+                      // ExtraProjectile,
+                      // /// Increases targeting distance
+                      // SatelliteSupport,
+                      // /// Increases movement speed
+                      // EnergySoda,
 }

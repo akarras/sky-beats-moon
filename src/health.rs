@@ -20,6 +20,9 @@ pub struct DamageEvent {
 #[derive(Event)]
 pub struct DeathEvent(pub Entity);
 
+#[derive(Component)]
+pub struct Dead;
+
 impl Plugin for HealthPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<DamageEvent>()
@@ -58,7 +61,8 @@ fn check_dead(
             commands
                 .entity(entity)
                 .remove::<Health>()
-                .try_insert(DespawnTimer(10.0));
+                .try_insert(DespawnTimer(10.0))
+                .insert(Dead);
         }
     }
 }
