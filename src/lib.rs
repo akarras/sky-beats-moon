@@ -2,6 +2,7 @@
 
 mod actions;
 mod audio;
+pub mod background_image;
 mod clouds;
 pub mod enemy;
 pub mod follow_camera;
@@ -20,6 +21,7 @@ use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
 
+use background_image::BackgroundPlugin;
 #[cfg(debug_assertions)]
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
@@ -70,6 +72,7 @@ impl Plugin for GamePlugin {
             WavesPlugin,
             PowerupPlugin,
             CloudPlugin,
+            BackgroundPlugin,
         ));
 
         #[cfg(debug_assertions)]

@@ -5,11 +5,11 @@ use bevy_rand::{prelude::WyRand, resource::GlobalEntropy};
 use rand::Rng;
 
 use crate::{
-    health::{DeathEvent, DespawnTimer, Health, MaxHealth},
+    health::{Dead, DeathEvent, DespawnTimer, Health, MaxHealth},
     loading::TextureAssets,
-    player::Player,
+    player::{OrientTowardsVelocity, Player},
     power_ups::{PowerUpType, Powerup, Powerups},
-    weapon::{Coord2D, Target, TargetVector, Velocity},
+    weapon::{Coord2D, Hostile, Target, TargetVector, Velocity},
     GameState,
 };
 
@@ -97,7 +97,7 @@ fn spawn_enemies(
                     *Coord2D::from(player_location) + *Coord2D::from(relative_position);
                 spawner.respawn_rate = 1.0;
 
-                info!("Spawning enemy! {relative_position} {theta}");
+                // info!("Spawning enemy! {relative_position} {theta}");
                 commands.spawn((
                     SpriteBundle {
                         texture: textures.red_plane.clone(),
@@ -105,13 +105,14 @@ fn spawn_enemies(
                         ..Default::default()
                     },
                     Enemy,
+                    Hostile,
                     Velocity(Vec2::new(-x, -y)),
-                    MaxHealth(5),
-                    Health(5),
+                    MaxHealth(2),
+                    Health(2),
                     Powerups([
                         Some(Powerup {
-                            power: PowerUpType::MachineGun,
-                            level: 1,
+                            power: PowerUpType::PeaShooter,
+                            level: 0,
                         }),
                         None,
                         None,
@@ -121,6 +122,7 @@ fn spawn_enemies(
                     ]),
                     Target(Some(player.0)),
                     TargetVector(None),
+                    OrientTowardsVelocity,
                 ));
             }
         }
@@ -147,13 +149,10 @@ fn move_enemies(
 }
 
 fn death_events(
-    mut death_events: EventReader<DeathEvent>,
-    mut enemy_sprites: Query<&mut Handle<Image>, (With<Enemy>, With<Sprite>)>,
+    mut enemy_sprites: Query<&mut Handle<Image>, (With<Enemy>, With<Sprite>, Added<Dead>)>,
     assets: Res<TextureAssets>,
 ) {
-    for death in death_events.read() {
-        if let Ok(mut enemy) = enemy_sprites.get_mut(death.0) {
-            *enemy = assets.red_plane_dead.clone();
-        }
+    for mut enemy in enemy_sprites.iter_mut() {
+        *enemy = assets.red_plane_dead.clone();
     }
 }

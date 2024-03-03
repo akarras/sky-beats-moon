@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::actions::{set_movement_actions, Actions};
 use crate::health::DespawnTimer;
 use crate::loading::AudioAssets;
@@ -18,7 +20,8 @@ impl Plugin for InternalAudioPlugin {
                 control_flying_sound
                     .after(set_movement_actions)
                     .run_if(in_state(GameState::Playing)),
-            );
+            )
+            .add_systems(OnExit(GameState::Playing), stop_audio);
     }
 }
 
@@ -33,6 +36,12 @@ fn start_audio(mut commands: Commands, audio_assets: Res<AudioAssets>, audio: Re
         .with_volume(0.3)
         .handle();
     commands.insert_resource(FlyingAudio(handle));
+}
+
+fn stop_audio(mut audio_instances: ResMut<Assets<AudioInstance>>) {
+    for audio in audio_instances.iter_mut() {
+        audio.1.stop(AudioTween::linear(Duration::from_millis(500)));
+    }
 }
 
 fn control_flying_sound(

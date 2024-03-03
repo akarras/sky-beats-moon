@@ -28,7 +28,7 @@ impl Plugin for HealthPlugin {
         app.add_event::<DamageEvent>()
             .add_event::<DeathEvent>()
             .add_systems(
-                FixedPostUpdate,
+                Update,
                 (check_dead, despawn, apply_damage).run_if(in_state(GameState::Playing)),
             );
     }

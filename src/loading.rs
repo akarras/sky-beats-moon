@@ -50,4 +50,10 @@ pub struct TextureAssets {
     pub rocket: Handle<Image>,
     #[asset(path = "textures/cloud_1.png")]
     pub cloud_1: Handle<Image>,
+    #[asset(path = "textures/cloud_2.png")]
+    pub cloud_2: Handle<Image>,
+    #[asset(path = "textures/grass.png")]
+    pub grass: Handle<Image>,
+    #[asset(path = "textures/supply_crate.png")]
+    pub supply_crate: Handle<Image>,
 }

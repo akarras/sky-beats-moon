@@ -43,7 +43,7 @@ fn spawn_pickup(
             if rand.gen_bool(0.3) {
                 commands.spawn((
                     SpriteBundle {
-                        texture: assets.bevy.clone(),
+                        texture: assets.supply_crate.clone(),
                         transform: *position,
                         ..Default::default()
                     },
@@ -71,7 +71,7 @@ fn player_pickup(
             // check if they overlap
             if (*Coord2D::from(player.translation) - *Coord2D::from(pickup_location.translation))
                 .length_squared()
-                < 100.0
+                < 1000.0
             {
                 commands.entity(pickup).despawn();
                 next_state.set(GameState::Chooser);
@@ -108,7 +108,6 @@ fn powerup_manager(
         for powerup in powerups.0.iter().flatten() {
             let level = powerup.level;
             let mut entity = commands.entity(entity);
-            info!("updating powerups");
             match powerup.power {
                 PowerUpType::MachineGun => entity.insert(MachineGun::new(level)),
                 PowerUpType::PeaShooter => entity.insert(PeaShooter::new(level)),

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_rand::{prelude::WyRand, resource::GlobalEntropy};
-use rand::Rng;
+use rand::{seq::SliceRandom, Rng};
 
 use crate::{loading::TextureAssets, weapon::Velocity, GameState};
 
@@ -17,8 +17,7 @@ impl Plugin for CloudPlugin {
                 to: GameState::Playing,
             },
             spawn_clouds,
-        )
-        .add_systems(Update, move_clouds.run_if(in_state(GameState::Playing)));
+        );
     }
 }
 
@@ -30,18 +29,22 @@ fn spawn_clouds(
     let spawn_range = 20000.0;
     let wind_speed = 200.0;
     let number_of_clouds = rand.gen_range(100..1000);
+    let mut rand = &mut *rand;
     let clouds = (0..number_of_clouds)
         .into_iter()
         .map(|_i| {
             (
                 SpriteBundle {
-                    texture: textures.cloud_1.clone(),
+                    texture: (*[&textures.cloud_1, &textures.cloud_2]
+                        .choose(&mut rand)
+                        .unwrap())
+                    .clone(),
                     transform: Transform::from_xyz(
                         rand.gen_range(-spawn_range..spawn_range),
                         rand.gen_range(-spawn_range..spawn_range),
                         -10.0,
                     )
-                    .with_scale(Vec3::new(0.8, 0.8, 0.8)),
+                    .with_scale(Vec3::splat(rand.gen_range(0.5..4.0))),
                     ..Default::default()
                 },
                 Cloud,
@@ -53,11 +56,4 @@ fn spawn_clouds(
         })
         .collect::<Vec<_>>();
     commands.spawn_batch(clouds);
-}
-
-fn move_clouds(mut clouds: Query<&mut Transform, With<Cloud>>, time: Res<Time>) {
-    let dt = time.delta_seconds();
-    for mut cloud in clouds.iter_mut() {
-        cloud.translation -= Vec3::new(-10.0, -10.0, 0.0) * dt;
-    }
 }

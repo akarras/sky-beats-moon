@@ -2,7 +2,7 @@ use crate::actions::Actions;
 use crate::health::{DespawnTimer, Health, MaxHealth};
 use crate::loading::TextureAssets;
 use crate::power_ups::Powerups;
-use crate::weapon::{Target, TargetVector, Velocity, Weapon};
+use crate::weapon::{Friendly, Target, TargetVector, Velocity, Weapon};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -22,7 +22,10 @@ impl Plugin for PlayerPlugin {
             },
             spawn_player,
         )
-        .add_systems(Update, move_player.run_if(in_state(GameState::Playing)));
+        .add_systems(
+            Update,
+            (move_player, turn_to_match_velocity).run_if(in_state(GameState::Playing)),
+        );
     }
 }
 
@@ -45,10 +48,12 @@ fn spawn_player(
             },
             Target(None),
             TargetVector(None),
-            MaxHealth(10000000),
-            Health(10000000),
+            MaxHealth(100),
+            Health(100),
             Velocity(Vec2::new(0.0, 100.0)),
+            Friendly,
             Powerups::default(),
+            OrientTowardsVelocity,
         ))
         .insert(Player);
     next_state.set(GameState::Chooser);
@@ -70,5 +75,17 @@ fn move_player(
     for mut player_velocity in &mut player_query {
         player_velocity.0 += movement;
         player_velocity.0 = player_velocity.0.clamp_length_max(200.0);
+    }
+}
+
+#[derive(Component)]
+pub struct OrientTowardsVelocity;
+
+fn turn_to_match_velocity(
+    mut query: Query<(&mut Transform, &Velocity), With<OrientTowardsVelocity>>,
+) {
+    for (mut transform, velocity) in query.iter_mut() {
+        let direction = velocity.0.normalize();
+        transform.rotation = Quat::from_rotation_arc(Vec3::Y, direction.extend(0.0));
     }
 }
