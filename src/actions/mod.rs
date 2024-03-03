@@ -1,3 +1,4 @@
+use bevy::input::mouse::MouseWheel;
 use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 
@@ -25,6 +26,7 @@ impl Plugin for ActionsPlugin {
 #[derive(Default, Resource)]
 pub struct Actions {
     pub player_movement: Option<Vec2>,
+    pub camera_zoom: Option<f32>,
 }
 
 pub fn set_movement_actions(
@@ -32,6 +34,7 @@ pub fn set_movement_actions(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     touch_input: Res<Touches>,
     player: Query<&Transform, With<Player>>,
+    mut mouse_scroll: EventReader<MouseWheel>,
     camera: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
 ) {
     let mut player_movement = Vec2::new(
@@ -51,6 +54,13 @@ pub fn set_movement_actions(
             }
         }
     }
+
+    let mut zoom = None;
+    for scroll in mouse_scroll.read() {
+        let value = zoom.get_or_insert(0.0);
+        *value -= scroll.y;
+    }
+    actions.camera_zoom = zoom;
 
     if player_movement != Vec2::ZERO {
         actions.player_movement = Some(player_movement.normalize());

@@ -34,4 +34,12 @@ pub struct TextureAssets {
     pub bevy: Handle<Image>,
     #[asset(path = "textures/github.png")]
     pub github: Handle<Image>,
+    #[asset(path = "textures/redplane.png")]
+    pub red_plane: Handle<Image>,
+    #[asset(path = "textures/redplane_dead.png")]
+    pub red_plane_dead: Handle<Image>,
+    #[asset(path = "textures/bullet.png")]
+    pub bullet: Handle<Image>,
+    #[asset(path = "textures/player.png")]
+    pub player: Handle<Image>,
 }

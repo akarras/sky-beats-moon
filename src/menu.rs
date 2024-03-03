@@ -1,3 +1,4 @@
+use crate::follow_camera::FollowCam;
 use crate::loading::TextureAssets;
 use crate::GameState;
 use bevy::prelude::*;
@@ -34,7 +35,7 @@ struct Menu;
 
 fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
     info!("menu");
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2dBundle::default(), FollowCam));
     commands
         .spawn((
             NodeBundle {

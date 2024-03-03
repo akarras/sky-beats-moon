@@ -11,8 +11,8 @@ body {
 }
 
 .game-container {
-    width: 800px;
-    height: 600px;
+    width: 1500px;
+    height: 1200px;
     display: flex;
     justify-content: center;
     align-items: center;
