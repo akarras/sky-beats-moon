@@ -9,6 +9,8 @@ mod loading;
 mod menu;
 pub mod pause_menu;
 mod player;
+pub mod power_ups;
+mod waves;
 pub mod weapon;
 
 use crate::actions::ActionsPlugin;
@@ -25,6 +27,8 @@ use enemy::EnemyPlugin;
 use follow_camera::FollowCameraPlugin;
 use health::HealthPlugin;
 use pause_menu::PausePlugin;
+use power_ups::PowerupPlugin;
+use waves::WavesPlugin;
 use weapon::WeaponPlugin;
 
 // This example game uses States to separate logic
@@ -59,6 +63,8 @@ impl Plugin for GamePlugin {
             HealthPlugin,
             WeaponPlugin,
             PausePlugin,
+            WavesPlugin,
+            PowerupPlugin,
         ));
 
         #[cfg(debug_assertions)]

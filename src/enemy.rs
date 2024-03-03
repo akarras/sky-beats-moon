@@ -110,7 +110,6 @@ fn spawn_enemies(
                     Weapon {
                         cooldown: 1.0,
                         cooldown_left: 1.0,
-                        range: 1000.0,
                     },
                     Target(Some(player.0)),
                 ));

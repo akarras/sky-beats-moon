@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use crate::{
     enemy::Enemy,
     health::{DamageEvent, DespawnTimer, Health},
-    loading::TextureAssets,
     player::Player,
     GameState,
 };
@@ -17,7 +16,7 @@ impl Plugin for WeaponPlugin {
         app.add_systems(
             Update,
             (
-                fire_weapons,
+                update_target_vectors,
                 update_acceleration,
                 apply_velocity,
                 check_bullet_collisions,
@@ -28,14 +27,13 @@ impl Plugin for WeaponPlugin {
     }
 }
 
+/// [Weapon] should provide the state for whether the weapon should be firing or not
 #[derive(Component)]
 pub struct Weapon {
     /// the base cooldown of the weapon
     pub cooldown: f32,
     /// the time left until the weapon fires again
     pub cooldown_left: f32,
-    /// the range that the weapon will shoot within
-    pub range: f32,
 }
 
 #[derive(Component)]
@@ -47,11 +45,18 @@ pub struct ConstantAcceleration(f32);
 #[derive(Component)]
 pub struct Projectile {
     fired_by: Entity,
+    damage_amount: i32,
+    /// size of the projectile
+    size: f32,
 }
 
 /// The entity that is being targeted by a weapon
 #[derive(Component)]
 pub struct Target(pub Option<Entity>);
+
+/// The current vector that the target is located at
+#[derive(Component)]
+pub struct TargetVector(Option<Vec2>);
 
 /// just tries to target the closest enemy
 fn update_player_target(
@@ -127,23 +132,31 @@ fn check_bullet_collisions(
     bullets: Query<(Entity, &Transform, &Projectile)>,
     other_entities: Query<(Entity, &Transform), With<Health>>,
 ) {
-    bullets
-        .par_iter()
-        .for_each(|(self_bullet, transform, Projectile { fired_by })| {
+    bullets.par_iter().for_each(
+        |(
+            self_bullet,
+            transform,
+            Projectile {
+                fired_by,
+                damage_amount,
+                size,
+            },
+        )| {
             for (entity, other_transform) in &other_entities {
                 // don't collide with sender
                 let fired_by = *fired_by;
                 if self_bullet != entity && fired_by != entity {
                     let delta = *Coord2D::from(transform.translation)
                         - *Coord2D::from(other_transform.translation);
-                    if delta.length() < 25.0 {
+                    if delta.length() < *size {
+                        let amount = *damage_amount;
                         commands.command_scope(|mut cmds| {
                             cmds.entity(self_bullet).despawn();
                             cmds.add(move |w: &mut World| {
                                 w.send_event(DamageEvent {
                                     damaged_by: fired_by,
                                     applied_to: entity,
-                                    amount: 1,
+                                    amount,
                                 });
                             });
                         });
@@ -151,47 +164,23 @@ fn check_bullet_collisions(
                     }
                 }
             }
-        });
+        },
+    );
 }
 
-fn fire_weapons(
-    commands: ParallelCommands,
-    mut weapons: Query<(Entity, &mut Weapon, &Target), Without<DespawnTimer>>,
-    timer: Res<Time>,
+fn update_target_vectors(
+    mut weapons: Query<(Entity, &mut TargetVector, &Target), Without<DespawnTimer>>,
     transforms: Query<&Transform>,
-    textures: Res<TextureAssets>,
 ) {
-    let dt = timer.delta_seconds();
     weapons
         .par_iter_mut()
-        .for_each(|(current_entity, mut weapon, target)| {
-            weapon.cooldown_left -= dt;
-            if weapon.cooldown_left <= 0.0 {
-                if let Some(target) = target.0 {
-                    if let Ok([source, target]) = transforms.get_many([current_entity, target]) {
-                        let direction = target.translation - source.translation;
-                        let direction_2d = Vec2::new(direction.x, direction.y);
-                        if weapon.range > direction_2d.length() {
-                            let velocity = direction_2d.normalize() * 2000.0;
-                            commands.command_scope(|mut commands| {
-                                commands.spawn((
-                                    SpriteBundle {
-                                        texture: textures.bullet.clone(),
-                                        transform: source.with_scale(Vec3::new(1.0, 1.0, 1.0)),
-                                        ..Default::default()
-                                    },
-                                    Projectile {
-                                        fired_by: current_entity,
-                                    },
-                                    Velocity(velocity),
-                                    ConstantAcceleration(0.9),
-                                    DespawnTimer(10.0),
-                                    Health(2),
-                                ));
-                            });
-                            weapon.cooldown_left = weapon.cooldown;
-                        }
-                    }
+        .for_each(|(current_entity, mut vector, target)| {
+            if let Some(target) = target.0 {
+                if let Ok([source, target]) = transforms.get_many([current_entity, target]) {
+                    let direction = target.translation - source.translation;
+                    let direction_2d = Vec2::new(direction.x, direction.y);
+                    vector.0 = (1000.0 * 1000.0 > direction_2d.length_squared())
+                        .then(|| direction_2d.normalize());
                 }
             }
         });

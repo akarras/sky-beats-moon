@@ -37,7 +37,6 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
             Weapon {
                 cooldown: 0.1,
                 cooldown_left: 1.0,
-                range: 10000.0,
             },
             Target(None),
             MaxHealth(10000000),
