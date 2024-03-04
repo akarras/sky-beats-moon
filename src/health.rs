@@ -23,13 +23,17 @@ pub struct DeathEvent(pub Entity);
 #[derive(Component)]
 pub struct Dead;
 
+#[derive(Component)]
+pub struct DeadTexture(pub Handle<Image>);
+
 impl Plugin for HealthPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<DamageEvent>()
             .add_event::<DeathEvent>()
             .add_systems(
                 Update,
-                (check_dead, despawn, apply_damage).run_if(in_state(GameState::Playing)),
+                (check_dead, despawn, apply_damage, apply_dead_texture)
+                    .run_if(in_state(GameState::Playing)),
             );
     }
 }
@@ -42,9 +46,9 @@ fn despawn(
     mut despawners: Query<(&mut DespawnTimer, Entity)>,
     time: Res<Time>,
 ) {
-    for (mut dead, entity) in &mut despawners {
-        dead.0 -= time.delta_seconds();
-        if dead.0 <= 0.0 {
+    for (mut despawn, entity) in &mut despawners {
+        despawn.0 -= time.delta_seconds();
+        if despawn.0 <= 0.0 {
             commands.entity(entity).despawn();
         }
     }
@@ -52,7 +56,7 @@ fn despawn(
 
 fn check_dead(
     mut commands: Commands,
-    healths: Query<(&Health, Entity), Without<DespawnTimer>>,
+    healths: Query<(&Health, Entity), (Without<DespawnTimer>, Changed<Health>)>,
     mut deaths: EventWriter<DeathEvent>,
 ) {
     for (health, entity) in &healths {
@@ -60,10 +64,16 @@ fn check_dead(
             deaths.send(DeathEvent(entity));
             commands
                 .entity(entity)
-                .remove::<Health>()
+                // .remove::<Health>()
                 .try_insert(DespawnTimer(10.0))
                 .insert(Dead);
         }
+    }
+}
+
+fn apply_dead_texture(mut images: Query<(&mut Handle<Image>, &DeadTexture), Changed<Dead>>) {
+    for (mut image, dead_texture) in images.iter_mut() {
+        *image = dead_texture.0.clone();
     }
 }
 

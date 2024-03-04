@@ -1,5 +1,5 @@
 use crate::actions::Actions;
-use crate::health::{DespawnTimer, Health, MaxHealth};
+use crate::health::{DeadTexture, DespawnTimer, Health, MaxHealth};
 use crate::loading::TextureAssets;
 use crate::power_ups::Powerups;
 use crate::weapon::{Friendly, Target, TargetVector, Velocity, Weapon};
@@ -54,6 +54,7 @@ fn spawn_player(
             Friendly,
             Powerups::default(),
             OrientTowardsVelocity,
+            DeadTexture(textures.player_dead.clone()),
         ))
         .insert(Player);
     next_state.set(GameState::Chooser);

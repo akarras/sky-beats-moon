@@ -5,7 +5,7 @@ use bevy_rand::{prelude::WyRand, resource::GlobalEntropy};
 use rand::Rng;
 
 use crate::{
-    health::{Dead, DeathEvent, DespawnTimer, Health, MaxHealth},
+    health::{DeadTexture, DespawnTimer, Health, MaxHealth},
     loading::TextureAssets,
     player::{OrientTowardsVelocity, Player},
     power_ups::{PowerUpType, Powerup, Powerups},
@@ -22,8 +22,7 @@ impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Playing), create_spawner)
             .add_systems(Update, move_enemies.run_if(in_state(GameState::Playing)))
-            .add_systems(Update, spawn_enemies.run_if(in_state(GameState::Playing)))
-            .add_systems(Update, death_events.run_if(in_state(GameState::Playing)));
+            .add_systems(Update, spawn_enemies.run_if(in_state(GameState::Playing)));
     }
 }
 
@@ -123,6 +122,7 @@ fn spawn_enemies(
                     Target(Some(player.0)),
                     TargetVector(None),
                     OrientTowardsVelocity,
+                    DeadTexture(textures.red_plane_dead.clone()),
                 ));
             }
         }
@@ -145,14 +145,5 @@ fn move_enemies(
                     velocity.0 = velocity.0.clamp_length_max(100.0);
                 }
             });
-    }
-}
-
-fn death_events(
-    mut enemy_sprites: Query<&mut Handle<Image>, (With<Enemy>, With<Sprite>, Added<Dead>)>,
-    assets: Res<TextureAssets>,
-) {
-    for mut enemy in enemy_sprites.iter_mut() {
-        *enemy = assets.red_plane_dead.clone();
     }
 }

@@ -141,10 +141,24 @@ impl From<Vec3> for Coord2D {
 #[derive(Component)]
 struct DeathParticles(Option<Box<dyn FnOnce(&mut Commands, Transform) + Send + Sync>>);
 
+/// The entity that was last hit
+#[derive(Component)]
+struct LastHit(Entity);
+
 /// Checks collisions between particles
 fn check_bullet_collisions_teamed<A, B>(
     commands: ParallelCommands,
-    mut bullets: Query<(Entity, &Transform, &Projectile, Option<&mut DeathParticles>), With<A>>,
+    mut bullets: Query<
+        (
+            Entity,
+            &Transform,
+            &Projectile,
+            Option<&mut DeathParticles>,
+            &mut Health,
+            Option<&LastHit>,
+        ),
+        With<A>,
+    >,
     other_entities: Query<(Entity, &Transform), (With<Health>, With<B>)>,
 ) where
     A: Component,
@@ -160,17 +174,28 @@ fn check_bullet_collisions_teamed<A, B>(
                 size,
             },
             death_particles,
+            mut health,
+            last_hit,
         )| {
             for (entity, other_transform) in &other_entities {
                 // don't collide with sender
                 let fired_by = *fired_by;
-                if self_bullet != entity && fired_by != entity {
+                if self_bullet != entity
+                    && fired_by != entity
+                    && last_hit.map(|l| l.0 != self_bullet).unwrap_or(true)
+                {
                     let delta = *Coord2D::from(transform.translation)
                         - *Coord2D::from(other_transform.translation);
                     if delta.length() < *size {
                         let amount = *damage_amount;
+                        health.0 -= 1;
+
                         commands.command_scope(|mut cmds| {
-                            cmds.entity(self_bullet).despawn();
+                            if health.0 <= 0 {
+                                cmds.entity(self_bullet).despawn();
+                            } else {
+                                cmds.entity(self_bullet).insert(LastHit(self_bullet));
+                            }
                             if let Some(death_particles) =
                                 death_particles.and_then(|mut u| u.0.take())
                             {
@@ -268,7 +293,7 @@ impl BasicGun for MachineGun {
     }
 
     fn health(&self) -> i32 {
-        2
+        1
     }
 }
 
@@ -321,7 +346,7 @@ impl BasicGun for PeaShooter {
     }
 
     fn health(&self) -> i32 {
-        100
+        2
     }
 }
 
@@ -366,7 +391,7 @@ impl BasicGun for Sniper {
     }
 
     fn health(&self) -> i32 {
-        500
+        10
     }
 
     fn projectile_sprite(assets: &Res<TextureAssets>) -> Handle<Image> {
