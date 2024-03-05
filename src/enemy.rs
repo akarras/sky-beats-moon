@@ -35,39 +35,15 @@ pub struct Spawner {
 fn create_spawner(mut commands: Commands) {
     commands.spawn_batch([
         (Spawner {
-            respawn_rate: 0.001,
+            respawn_rate: 1.0,
             spawn_range: 1000.0..=6000.0,
         },),
         (Spawner {
-            respawn_rate: 0.001,
+            respawn_rate: 2.0,
             spawn_range: 1000.0..=10000.0,
         },),
         (Spawner {
-            respawn_rate: 0.001,
-            spawn_range: 1000.0..=100000.0,
-        },),
-        (Spawner {
-            respawn_rate: 0.001,
-            spawn_range: 1000.0..=100000.0,
-        },),
-        (Spawner {
-            respawn_rate: 0.001,
-            spawn_range: 1000.0..=100000.0,
-        },),
-        (Spawner {
-            respawn_rate: 0.001,
-            spawn_range: 1000.0..=100000.0,
-        },),
-        (Spawner {
-            respawn_rate: 0.001,
-            spawn_range: 1000.0..=100000.0,
-        },),
-        (Spawner {
-            respawn_rate: 0.001,
-            spawn_range: 1000.0..=100000.0,
-        },),
-        (Spawner {
-            respawn_rate: 0.001,
+            respawn_rate: 2.0,
             spawn_range: 1000.0..=100000.0,
         },),
     ]);

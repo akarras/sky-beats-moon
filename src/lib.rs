@@ -7,11 +7,14 @@ mod clouds;
 pub mod enemy;
 pub mod follow_camera;
 pub mod health;
+mod hud;
 mod loading;
 mod menu;
+pub mod overshield;
 pub mod pause_menu;
 mod player;
 pub mod power_ups;
+mod stats;
 mod waves;
 pub mod weapon;
 
@@ -30,8 +33,11 @@ use clouds::CloudPlugin;
 use enemy::EnemyPlugin;
 use follow_camera::FollowCameraPlugin;
 use health::HealthPlugin;
+use hud::HudPlugin;
+use overshield::OvershieldPlugin;
 use pause_menu::PausePlugin;
 use power_ups::PowerupPlugin;
+use stats::StatsPlugin;
 use waves::WavesPlugin;
 use weapon::WeaponPlugin;
 
@@ -51,29 +57,32 @@ enum GameState {
     Paused,
     /// The player is choosing an item
     Chooser,
+    /// End game screen shows stats from the round
+    EndGame,
 }
 
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.init_state::<GameState>().add_plugins((
-            EntropyPlugin::<WyRand>::default(),
-            LoadingPlugin,
-            MenuPlugin,
-            ActionsPlugin,
-            InternalAudioPlugin,
-            PlayerPlugin,
-            EnemyPlugin,
-            FollowCameraPlugin,
-            HealthPlugin,
-            WeaponPlugin,
-            PausePlugin,
-            WavesPlugin,
-            PowerupPlugin,
-            CloudPlugin,
-            BackgroundPlugin,
-        ));
+        app.init_state::<GameState>()
+            .add_plugins((
+                EntropyPlugin::<WyRand>::default(),
+                LoadingPlugin,
+                MenuPlugin,
+                ActionsPlugin,
+                InternalAudioPlugin,
+                PlayerPlugin,
+                EnemyPlugin,
+                FollowCameraPlugin,
+                HealthPlugin,
+                WeaponPlugin,
+                PausePlugin,
+                WavesPlugin,
+                PowerupPlugin,
+                CloudPlugin,
+            ))
+            .add_plugins((BackgroundPlugin, OvershieldPlugin, HudPlugin, StatsPlugin));
 
         #[cfg(debug_assertions)]
         {

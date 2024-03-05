@@ -7,6 +7,7 @@ use crate::{
     enemy::Enemy,
     health::DeathEvent,
     loading::TextureAssets,
+    overshield::Overshield,
     player::Player,
     weapon::{Coord2D, MachineGun, PeaShooter, Sniper, SpecialMunitions},
     GameState,
@@ -113,6 +114,7 @@ fn powerup_manager(
                 PowerUpType::PeaShooter => entity.insert(PeaShooter::new(level)),
                 PowerUpType::Sniper => entity.insert(Sniper::new(level)),
                 PowerUpType::SpecialMunitions => entity.insert(SpecialMunitions::new(level)),
+                PowerUpType::Overshield => entity.insert(Overshield::new(level)),
             };
         }
     }
@@ -201,7 +203,7 @@ fn add_choice_menu(
             c.spawn(TextBundle::from_section(
                 "Choose a powerup!",
                 TextStyle {
-                    font_size: 32.0,
+                    font_size: 42.0,
                     ..Default::default()
                 },
             ));
@@ -209,6 +211,10 @@ fn add_choice_menu(
                 c.spawn((
                     ButtonBundle {
                         background_color: BackgroundColor(Color::rgb(0.0, 0.3, 0.0)),
+                        style: Style {
+                            width: Val::Vw(60.0),
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
                     Choice(*choice),
@@ -217,7 +223,7 @@ fn add_choice_menu(
                     c.spawn(TextBundle::from_section(
                         format!("{:?}", choice),
                         TextStyle {
-                            font_size: 20.0,
+                            font_size: 60.0,
                             ..Default::default()
                         },
                     ));
@@ -264,17 +270,19 @@ pub enum PowerUpType {
     // Nanobots,
     // /// prevents the enemy from targeting you while active
     // Flares,
-    // /// Adds extra health ontop of your current shield
-    // Overshield,
+    /// Adds extra health ontop of your current health
+    Overshield,
     /// Increases the damage of all weapons
-    SpecialMunitions, // /// Adds total health
-                      // Armor,
-                      // /// Duplicates yourself and copies all weapons
-                      // Squadron,
-                      // /// Increases the number of projectiles
-                      // ExtraProjectile,
-                      // /// Increases targeting distance
-                      // SatelliteSupport,
-                      // /// Increases movement speed
-                      // EnergySoda,
+    SpecialMunitions,
+    // Increases the number of enemies that projectiles will pass through
+    // /// Adds total health
+    // Armor,
+    // /// Duplicates yourself and copies all weapons
+    // Squadron,
+    // /// Increases the number of projectiles
+    // ExtraProjectile,
+    // /// Increases targeting distance
+    // SatelliteSupport,
+    // /// Increases movement speed
+    // EnergySoda,
 }

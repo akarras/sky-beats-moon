@@ -24,7 +24,7 @@ impl Plugin for PlayerPlugin {
         )
         .add_systems(
             Update,
-            (move_player, turn_to_match_velocity).run_if(in_state(GameState::Playing)),
+            (move_player, turn_to_match_velocity, dead_player).run_if(in_state(GameState::Playing)),
         );
     }
 }
@@ -85,8 +85,17 @@ pub struct OrientTowardsVelocity;
 fn turn_to_match_velocity(
     mut query: Query<(&mut Transform, &Velocity), With<OrientTowardsVelocity>>,
 ) {
-    for (mut transform, velocity) in query.iter_mut() {
+    query.par_iter_mut().for_each(|(mut transform, velocity)| {
         let direction = velocity.0.normalize();
         transform.rotation = Quat::from_rotation_arc(Vec3::Y, direction.extend(0.0));
+    });
+}
+
+fn dead_player(
+    mut dead_player: RemovedComponents<Player>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for _dead in dead_player.read() {
+        next_state.set(GameState::EndGame);
     }
 }

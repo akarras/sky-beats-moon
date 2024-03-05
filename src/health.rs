@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::GameState;
+use crate::{overshield::OvershieldState, GameState};
 
 pub struct HealthPlugin;
 
@@ -56,7 +56,7 @@ fn despawn(
 
 fn check_dead(
     mut commands: Commands,
-    healths: Query<(&Health, Entity), (Without<DespawnTimer>, Changed<Health>)>,
+    healths: Query<(&Health, Entity), (Without<Dead>, Changed<Health>)>,
     mut deaths: EventWriter<DeathEvent>,
 ) {
     for (health, entity) in &healths {
@@ -64,9 +64,9 @@ fn check_dead(
             deaths.send(DeathEvent(entity));
             commands
                 .entity(entity)
-                // .remove::<Health>()
+                .remove::<Health>()
                 .try_insert(DespawnTimer(10.0))
-                .insert(Dead);
+                .try_insert(Dead);
         }
     }
 }
@@ -77,18 +77,37 @@ fn apply_dead_texture(mut images: Query<(&mut Handle<Image>, &DeadTexture), Chan
     }
 }
 
-fn apply_damage(mut incoming_events: EventReader<DamageEvent>, mut health: Query<&mut Health>) {
+fn apply_damage(
+    mut incoming_events: EventReader<DamageEvent>,
+    mut health: Query<(&mut Health, Option<&mut OvershieldState>)>,
+) {
     for DamageEvent {
         damaged_by,
         applied_to,
         amount,
     } in incoming_events.read()
     {
-        if let Ok(mut target) = health.get_mut(*applied_to) {
-            target.0 -= *amount;
+        if let Ok((mut target, overshield)) = health.get_mut(*applied_to) {
+            let mut damage = *amount;
+            if let Some(mut overshield) = overshield {
+                overshield.secs_until_recharge = 2.0;
+                let starting_shield = overshield.current_overshield;
+                overshield.current_overshield -= *amount;
+                info!(
+                    "Shield damage {:?}->{:?} Shield: {}-{}={}",
+                    damaged_by, applied_to, starting_shield, damage, overshield.current_overshield
+                );
+                damage = 0;
+                // carry forward the remaining damage
+                if overshield.current_overshield < 0 {
+                    damage = overshield.current_overshield.abs();
+                    overshield.current_overshield = 0;
+                }
+            }
+            target.0 -= damage;
             info!(
                 "Damage done {:?}->{:?}: {}. Health remaining: {}",
-                damaged_by, applied_to, *amount, target.0
+                damaged_by, applied_to, damage, target.0
             );
         }
     }

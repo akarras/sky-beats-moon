@@ -94,10 +94,10 @@ fn update_acceleration(
     time: Res<Time>,
 ) {
     let dt = time.delta_seconds();
-    for (mut velocity, accel) in &mut velocities {
+    velocities.par_iter_mut().for_each(|(mut velocity, accel)| {
         let vel = velocity.0;
         velocity.0 += vel * (dt * accel.0)
-    }
+    });
 }
 
 fn apply_velocity(mut entities: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
@@ -139,7 +139,7 @@ impl From<Vec3> for Coord2D {
 }
 
 #[derive(Component)]
-struct DeathParticles(Option<Box<dyn FnOnce(&mut Commands, Transform) + Send + Sync>>);
+struct DeathParticles(Option<Box<dyn Fn(&mut Commands, Transform) + Send + Sync>>);
 
 /// The entity that was last hit
 #[derive(Component)]
@@ -155,7 +155,7 @@ fn check_bullet_collisions_teamed<A, B>(
             &Projectile,
             Option<&mut DeathParticles>,
             &mut Health,
-            Option<&LastHit>,
+            Option<&mut LastHit>,
         ),
         With<A>,
     >,
@@ -182,7 +182,7 @@ fn check_bullet_collisions_teamed<A, B>(
                 let fired_by = *fired_by;
                 if self_bullet != entity
                     && fired_by != entity
-                    && last_hit.map(|l| l.0 != self_bullet).unwrap_or(true)
+                    && last_hit.as_ref().map(|l| l.0 != entity).unwrap_or(true)
                 {
                     let delta = *Coord2D::from(transform.translation)
                         - *Coord2D::from(other_transform.translation);
@@ -193,11 +193,13 @@ fn check_bullet_collisions_teamed<A, B>(
                         commands.command_scope(|mut cmds| {
                             if health.0 <= 0 {
                                 cmds.entity(self_bullet).despawn();
+                            } else if let Some(mut hit) = last_hit {
+                                hit.0 = entity;
                             } else {
-                                cmds.entity(self_bullet).insert(LastHit(self_bullet));
+                                cmds.entity(self_bullet).try_insert(LastHit(entity));
                             }
                             if let Some(death_particles) =
-                                death_particles.and_then(|mut u| u.0.take())
+                                death_particles.as_ref().and_then(|u| u.0.as_ref())
                             {
                                 death_particles(&mut cmds, *transform);
                             }
@@ -268,7 +270,7 @@ impl BasicGun for MachineGun {
             3 => 0.3,
             4 => 0.2,
             5 => 0.1,
-            _ => 0.0,
+            _ => 0.05,
         }
     }
 
@@ -317,11 +319,11 @@ impl BasicGun for PeaShooter {
         match self.level {
             0 => 2.5,
             1 => 1.0,
-            2 => 1.0,
-            3 => 1.0,
-            4 => 1.0,
-            5 => 1.0,
-            _ => 0.0,
+            2 => 0.9,
+            3 => 0.8,
+            4 => 0.7,
+            5 => 0.6,
+            _ => 0.5,
         }
     }
 
@@ -372,9 +374,9 @@ impl BasicGun for Sniper {
             1 => 5.0,
             2 => 5.0,
             3 => 5.0,
-            4 => 5.0,
-            5 => 5.0,
-            _ => 0.0,
+            4 => 4.0,
+            5 => 3.0,
+            _ => 2.0,
         }
     }
 
@@ -404,7 +406,7 @@ impl BasicGun for Sniper {
 }
 
 fn shoot_basic_gun<T>(
-    mut commands: Commands,
+    commands: ParallelCommands,
     mut machine_gun: Query<
         (
             Entity,
@@ -423,46 +425,47 @@ fn shoot_basic_gun<T>(
     T: Component + BasicGun + Sized,
 {
     let dt = time.delta_seconds();
-    machine_gun.iter_mut().for_each(
+    machine_gun.par_iter_mut().for_each(
         |(fired_by, vector, mut gun, transform, munitions, friendly, enemy)| {
             if let Some(target_vector) = vector.0 {
                 if *gun.cooldown_remaining() <= 0.0 {
                     *gun.cooldown_remaining() = gun.cooldown();
                     let death_texture = textures.bullet_impact.clone();
-
-                    let mut entity = commands.spawn((
-                        SpriteBundle {
-                            texture: T::projectile_sprite(&textures),
-                            transform: transform.with_scale(Vec3::splat(1.0)),
-                            ..Default::default()
-                        },
-                        Projectile {
-                            fired_by,
-                            damage_amount: gun.damage()
-                                * munitions.map(|m| m.damage_mult()).unwrap_or(1),
-                            size: 25.0,
-                        },
-                        Velocity(target_vector * gun.projectile_velocity()),
-                        Health(gun.health()),
-                        DeathParticles(Some(Box::new(move |cmds, transform| {
-                            cmds.spawn((
-                                SpriteBundle {
-                                    texture: death_texture,
-                                    transform,
-                                    ..Default::default()
-                                },
-                                DespawnTimer(0.2),
-                            ));
-                        }))),
-                        DespawnTimer(30.0),
-                        OrientTowardsVelocity,
-                    ));
-                    if friendly.is_some() {
-                        entity.insert(Friendly);
-                    }
-                    if enemy.is_some() {
-                        entity.insert(Hostile);
-                    }
+                    commands.command_scope(|mut cmd| {
+                        let mut entity = cmd.spawn((
+                            SpriteBundle {
+                                texture: T::projectile_sprite(&textures),
+                                transform: transform.with_scale(Vec3::splat(1.0)),
+                                ..Default::default()
+                            },
+                            Projectile {
+                                fired_by,
+                                damage_amount: gun.damage()
+                                    * munitions.map(|m| m.damage_mult()).unwrap_or(1),
+                                size: 40.0,
+                            },
+                            Velocity(target_vector * gun.projectile_velocity()),
+                            Health(gun.health()),
+                            DeathParticles(Some(Box::new(move |cmds, transform| {
+                                cmds.spawn((
+                                    SpriteBundle {
+                                        texture: death_texture.clone(),
+                                        transform,
+                                        ..Default::default()
+                                    },
+                                    DespawnTimer(0.2),
+                                ));
+                            }))),
+                            DespawnTimer(30.0),
+                            OrientTowardsVelocity,
+                        ));
+                        if friendly.is_some() {
+                            entity.insert(Friendly);
+                        }
+                        if enemy.is_some() {
+                            entity.insert(Hostile);
+                        }
+                    });
                 } else {
                     *gun.cooldown_remaining() -= dt;
                 }

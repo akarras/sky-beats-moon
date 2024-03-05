@@ -28,11 +28,15 @@ fn spawn_clouds(
 ) {
     let spawn_range = 20000.0;
     let wind_speed = 200.0;
-    let number_of_clouds = rand.gen_range(100..1000);
+    let number_of_clouds = rand.gen_range(100..200);
     let mut rand = &mut *rand;
     let clouds = (0..number_of_clouds)
         .into_iter()
         .map(|_i| {
+            let velocity = Vec2::new(
+                rand.gen_range(-wind_speed..wind_speed),
+                rand.gen_range(-wind_speed..wind_speed),
+            );
             (
                 SpriteBundle {
                     texture: (*[&textures.cloud_1, &textures.cloud_2]
@@ -44,14 +48,12 @@ fn spawn_clouds(
                         rand.gen_range(-spawn_range..spawn_range),
                         -10.0,
                     )
-                    .with_scale(Vec3::splat(rand.gen_range(0.5..4.0))),
+                    .with_scale(Vec3::splat(rand.gen_range(0.5..4.0)))
+                    .with_rotation(Quat::from_rotation_arc(Vec3::Y, velocity.extend(0.0))),
                     ..Default::default()
                 },
                 Cloud,
-                Velocity(Vec2::new(
-                    rand.gen_range(-wind_speed..wind_speed),
-                    rand.gen_range(-wind_speed..wind_speed),
-                )),
+                Velocity(velocity),
             )
         })
         .collect::<Vec<_>>();
