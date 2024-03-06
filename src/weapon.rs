@@ -7,7 +7,7 @@ use crate::{
     health::{DamageEvent, Dead, DespawnTimer, Health},
     loading::TextureAssets,
     player::{OrientTowardsVelocity, Player},
-    GameState,
+    GameState, GameSystems,
 };
 
 pub struct WeaponPlugin;
@@ -23,11 +23,20 @@ impl Plugin for WeaponPlugin {
         app.add_systems(
             Update,
             (
+                update_acceleration.in_set(GameSystems::PreMovement),
+                apply_velocity
+                    .in_set(GameSystems::Movement)
+                    .after(GameSystems::PreMovement)
+                    .before(GameSystems::Collision),
+                check_bullet_collisions_teamed::<Hostile, Friendly>.in_set(GameSystems::Collision),
+                check_bullet_collisions_teamed::<Friendly, Hostile>.in_set(GameSystems::Collision),
+            )
+                .run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(
+            FixedUpdate,
+            (
                 update_target_vectors,
-                update_acceleration,
-                apply_velocity,
-                check_bullet_collisions_teamed::<Hostile, Friendly>,
-                check_bullet_collisions_teamed::<Friendly, Hostile>,
                 update_player_target,
                 shoot_basic_gun::<MachineGun>,
                 shoot_basic_gun::<PeaShooter>,

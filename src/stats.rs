@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     enemy::Enemy,
     health::{DamageEvent, DeathEvent},
-    GameState,
+    GameState, GameSystems,
 };
 pub struct StatsPlugin;
 
@@ -16,9 +16,24 @@ impl Plugin for StatsPlugin {
             .insert_resource(EnemiesStillAlive(0))
             .add_systems(
                 FixedUpdate,
-                (count_enemies, collect_damage_done).run_if(in_state(GameState::Playing)),
-            );
+                (count_enemies, collect_damage_done, count_deaths)
+                    .after(GameSystems::Collision)
+                    .run_if(in_state(GameState::Playing)),
+            )
+            .add_systems(OnEnter(GameState::Menu), reset_stats);
     }
+}
+
+fn reset_stats(
+    mut total_damage_done: ResMut<TotalDamageDone>,
+    mut enemies_killed: ResMut<TotalEnemiesKilled>,
+    mut enemies_alive: ResMut<EnemiesStillAlive>,
+    mut bullets_fired: ResMut<TotalBulletsFired>,
+) {
+    total_damage_done.0 = 0;
+    enemies_alive.0 = 0;
+    enemies_killed.0 = 0;
+    bullets_fired.0 = 0;
 }
 
 #[derive(Resource)]
@@ -43,7 +58,7 @@ fn count_deaths(
     mut deaths: EventReader<DeathEvent>,
     mut enemies_killed: ResMut<TotalEnemiesKilled>,
 ) {
-    for death in deaths.read() {
+    for _death in deaths.read() {
         enemies_killed.0 += 1;
     }
 }

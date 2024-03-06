@@ -5,12 +5,7 @@ use bevy_rand::{prelude::WyRand, resource::GlobalEntropy};
 use rand::Rng;
 
 use crate::{
-    health::{DeadTexture, DespawnTimer, Health, MaxHealth},
-    loading::TextureAssets,
-    player::{OrientTowardsVelocity, Player},
-    power_ups::{PowerUpType, Powerup, Powerups},
-    weapon::{Coord2D, Hostile, Target, TargetVector, Velocity},
-    GameState,
+    health::{DeadTexture, DespawnTimer, Health, MaxHealth}, leveling::XpWorth, loading::TextureAssets, player::{OrientTowardsVelocity, Player}, power_ups::{PowerUpType, Powerup, Powerups}, weapon::{Coord2D, Hostile, Target, TargetVector, Velocity}, GameState
 };
 
 pub struct EnemyPlugin;
@@ -21,8 +16,15 @@ pub struct Enemy;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Playing), create_spawner)
+            .add_systems(OnEnter(GameState::Menu), cleanup_enemies)
             .add_systems(Update, move_enemies.run_if(in_state(GameState::Playing)))
             .add_systems(Update, spawn_enemies.run_if(in_state(GameState::Playing)));
+    }
+}
+
+fn cleanup_enemies(mut commands: Commands, enemies: Query<Entity, With<Enemy>>) {
+    for enemy in enemies.iter() {
+        commands.entity(enemy).despawn();
     }
 }
 
@@ -99,6 +101,7 @@ fn spawn_enemies(
                     TargetVector(None),
                     OrientTowardsVelocity,
                     DeadTexture(textures.red_plane_dead.clone()),
+                    XpWorth(10)
                 ));
             }
         }

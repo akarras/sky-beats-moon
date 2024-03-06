@@ -2,15 +2,23 @@ use bevy::prelude::*;
 
 use crate::{stats::*, GameState};
 
-struct EndGamePlugin;
+pub struct EndGamePlugin;
 
 impl Plugin for EndGamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::EndGame), add_hud);
+        app.add_systems(OnEnter(GameState::EndGame), add_death_screen)
+            .add_systems(OnExit(GameState::EndGame), cleanup_death_screen)
+            .add_systems(Update, main_menu_handler);
     }
 }
 
-fn add_hud(
+#[derive(Component)]
+struct MainMenuButton;
+
+#[derive(Component)]
+struct DeathScreen;
+
+fn add_death_screen(
     mut commands: Commands,
     enemies_killed: Res<TotalEnemiesKilled>,
     damage_done: Res<TotalDamageDone>,
@@ -32,10 +40,57 @@ fn add_hud(
         )
     });
     commands
-        .spawn(NodeBundle {
-            ..Default::default()
-        })
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    height: Val::Vh(100.0),
+                    width: Val::Vw(100.0),
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    justify_items: JustifyItems::Center,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            DeathScreen,
+        ))
         .with_children(|children| {
             children.spawn(TextBundle::from_sections(stats));
+            children
+                .spawn((
+                    ButtonBundle {
+                        ..Default::default()
+                    },
+                    MainMenuButton,
+                ))
+                .with_children(|btn| {
+                    btn.spawn((TextBundle::from_section(
+                        "Main Menu",
+                        TextStyle {
+                            font_size: 30.0,
+                            ..Default::default()
+                        },
+                    ),));
+                });
         });
+}
+
+fn cleanup_death_screen(mut commands: Commands, death_screen: Query<Entity, With<DeathScreen>>) {
+    for death in death_screen.iter() {
+        commands.entity(death).despawn_recursive();
+    }
+}
+
+fn main_menu_handler(
+    menu_button: Query<&Interaction, (With<MainMenuButton>, Changed<Interaction>)>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for button in menu_button.iter() {
+        match button {
+            Interaction::Pressed => {
+                next_state.set(GameState::Menu);
+            }
+            _ => {}
+        }
+    }
 }

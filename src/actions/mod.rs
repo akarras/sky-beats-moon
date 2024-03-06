@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::actions::game_control::{get_movement, GameControl};
 use crate::player::Player;
-use crate::GameState;
+use crate::{GameState, GameSystems};
 
 mod game_control;
 
@@ -17,7 +17,9 @@ impl Plugin for ActionsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Actions>().add_systems(
             Update,
-            set_movement_actions.run_if(in_state(GameState::Playing)),
+            set_movement_actions
+                .run_if(in_state(GameState::Playing))
+                .in_set(GameSystems::Input),
         );
     }
 }
@@ -27,6 +29,7 @@ pub struct Actions {
     pub player_movement: Option<Vec2>,
     pub camera_zoom: Option<f32>,
 }
+
 
 pub fn set_movement_actions(
     mut actions: ResMut<Actions>,
@@ -42,19 +45,32 @@ pub fn set_movement_actions(
         get_movement(GameControl::Up, &keyboard_input)
             - get_movement(GameControl::Down, &keyboard_input),
     );
-
-    if let Some(touch_position) = touch_input.first_pressed_position() {
-        let (camera, camera_transform) = camera.single();
-        if let Some(touch_position) = camera.viewport_to_world_2d(camera_transform, touch_position)
-        {
-            let diff = touch_position - player.single().translation.xy();
-            if diff.length() > FOLLOW_EPSILON {
-                player_movement = diff.normalize();
+    let mut zoom = None;
+    // if there are two touches, see if they are pushing together or apart to generate the scrolling effect
+    if touch_input.iter().count() == 2 {
+        info!("Two touch!");
+        let mut touches = touch_input.iter();
+        let touch_1 = touches.next().unwrap();
+        let touch_2 = touches.next().unwrap();
+        let current_distance = touch_1.position() - touch_2.position();
+        let previous_distance = touch_1.previous_position() - touch_2.previous_position();
+        let diff = current_distance.length() - previous_distance.length();
+        info!("Diff {diff}");
+        if diff.abs() > 0.01 {
+            zoom = Some(diff / 100.0);
+        }
+    } else {
+        if let Some(touch_position) = touch_input.first_pressed_position() {
+            let (camera, camera_transform) = camera.single();
+            if let Some(touch_position) = camera.viewport_to_world_2d(camera_transform, touch_position)
+            {
+                let diff = touch_position - player.single().translation.xy();
+                if diff.length() > FOLLOW_EPSILON {
+                    player_movement = diff.normalize();
+                }
             }
         }
     }
-
-    let mut zoom = None;
     for scroll in mouse_scroll.read() {
         let value = zoom.get_or_insert(0.0);
         *value -= scroll.y;
@@ -66,4 +82,5 @@ pub fn set_movement_actions(
     } else {
         actions.player_movement = None;
     }
+    
 }

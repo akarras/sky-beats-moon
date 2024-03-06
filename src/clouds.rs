@@ -28,7 +28,7 @@ fn spawn_clouds(
 ) {
     let spawn_range = 20000.0;
     let wind_speed = 200.0;
-    let number_of_clouds = rand.gen_range(100..200);
+    let number_of_clouds = rand.gen_range(1..200);
     let mut rand = &mut *rand;
     let clouds = (0..number_of_clouds)
         .into_iter()

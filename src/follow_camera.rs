@@ -26,7 +26,7 @@ fn scale_camera(
     if let Some(scale) = actions.camera_zoom {
         for mut camera in &mut cameras {
             camera.scale += scale.clamp(-0.2, 0.2);
-            camera.scale = camera.scale.clamp(0.5, 100.0);
+            camera.scale = camera.scale.clamp(0.5, 2.5);
         }
     }
 }

@@ -33,9 +33,11 @@ impl Default for ButtonColors {
 #[derive(Component)]
 struct Menu;
 
-fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
+fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>, cameras: Query<&FollowCam>) {
     info!("menu");
-    commands.spawn((Camera2dBundle::default(), FollowCam));
+    if cameras.is_empty() {
+        commands.spawn((Camera2dBundle::default(), FollowCam));
+    }
     commands
         .spawn((
             NodeBundle {

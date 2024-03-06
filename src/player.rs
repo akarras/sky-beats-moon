@@ -1,9 +1,10 @@
 use crate::actions::Actions;
 use crate::health::{DeadTexture, DespawnTimer, Health, MaxHealth};
+use crate::leveling::{Level, Xp};
 use crate::loading::TextureAssets;
 use crate::power_ups::Powerups;
 use crate::weapon::{Friendly, Target, TargetVector, Velocity, Weapon};
-use crate::GameState;
+use crate::{GameState, GameSystems};
 use bevy::prelude::*;
 
 pub struct PlayerPlugin;
@@ -22,9 +23,16 @@ impl Plugin for PlayerPlugin {
             },
             spawn_player,
         )
+        .add_systems(OnEnter(GameState::Menu), despawn_player)
         .add_systems(
             Update,
-            (move_player, turn_to_match_velocity, dead_player).run_if(in_state(GameState::Playing)),
+            (
+                (move_player, turn_to_match_velocity)
+                    .in_set(GameSystems::PreMovement)
+                    .after(GameSystems::Input),
+                dead_player,
+            )
+                .run_if(in_state(GameState::Playing)),
         );
     }
 }
@@ -55,9 +63,17 @@ fn spawn_player(
             Powerups::default(),
             OrientTowardsVelocity,
             DeadTexture(textures.player_dead.clone()),
+            Xp(0),
+            Level(1)
         ))
         .insert(Player);
     next_state.set(GameState::Chooser);
+}
+
+fn despawn_player(mut commands: Commands, player: Query<Entity, With<Player>>) {
+    for player in player.iter() {
+        commands.entity(player).despawn();
+    }
 }
 
 fn move_player(

@@ -1,12 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    health::{Health, MaxHealth},
-    overshield::OvershieldState,
-    player::Player,
-    stats::EnemiesStillAlive,
-    waves::WaveTimer,
-    GameState,
+    health::{Health, MaxHealth}, leveling::{xp_required_for_level, Level, Xp}, overshield::OvershieldState, player::Player, stats::{EnemiesStillAlive, TotalEnemiesKilled}, waves::WaveTimer, GameState, GameSystems
 };
 
 pub struct HudPlugin;
@@ -22,7 +17,9 @@ impl Plugin for HudPlugin {
                     update_health_bar,
                     update_time_text,
                     update_enemy_counter_text,
+                    update_xp_bar,
                 )
+                    .in_set(GameSystems::Ui)
                     .run_if(in_state(GameState::Playing)),
             );
     }
@@ -40,6 +37,9 @@ struct ShieldBar;
 #[derive(Component)]
 struct EnemyCounter;
 
+#[derive(Component)]
+struct XpBar;
+
 fn add_hud(mut commands: Commands) {
     commands
         .spawn(NodeBundle {
@@ -54,6 +54,23 @@ fn add_hud(mut commands: Commands) {
             ..Default::default()
         })
         .with_children(|children| {
+            children.spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Vw(0.0),
+                        height: Val::Vh(1.0),
+                        ..Default::default()
+                    },
+                    background_color: BackgroundColor(Color::Rgba {
+                        red: 0.7,
+                        green: 0.1,
+                        blue: 0.7,
+                        alpha: 1.0,
+                    }),
+                    ..Default::default()
+                },
+                XpBar,
+            ));
             children.spawn((
                 NodeBundle {
                     style: Style {
@@ -149,6 +166,17 @@ fn update_shield_bar(
     }
 }
 
+fn update_xp_bar(
+    mut xp_bar: Query<&mut Style, With<XpBar>>,
+    xp: Query<(&Xp, &Level), (Or<(Changed<Xp>, Changed<Level>)>, With<Player>)>) {
+        for (xp, level) in xp.iter() {
+            for mut bar in xp_bar.iter_mut() {
+                let required_xp = xp_required_for_level(level);
+                bar.width = Val::Vw((xp.0 / required_xp.0) as f32 * 100.0);
+            }
+        }
+    }
+
 #[derive(Component)]
 struct TimerUi;
 
@@ -172,10 +200,11 @@ fn update_time_text(mut time: Query<&mut Text, With<TimerText>>, timer: Res<Wave
 fn update_enemy_counter_text(
     mut enemy: Query<&mut Text, With<EnemyCounter>>,
     alive: Res<EnemiesStillAlive>,
+    killed: Res<TotalEnemiesKilled>,
 ) {
     for mut text in enemy.iter_mut() {
         *text = Text::from_section(
-            format!("{} alive", alive.0),
+            format!("{} alive {} killed", alive.0, killed.0),
             TextStyle {
                 font_size: 30.0,
                 ..Default::default()
