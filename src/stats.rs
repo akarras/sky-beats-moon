@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use crate::{enemy::Enemy, health::DamageEvent, GameState};
+use crate::{
+    enemy::Enemy,
+    health::{DamageEvent, DeathEvent},
+    GameState,
+};
 pub struct StatsPlugin;
 
 impl Plugin for StatsPlugin {
@@ -18,7 +22,7 @@ impl Plugin for StatsPlugin {
 }
 
 #[derive(Resource)]
-struct TotalDamageDone(u32);
+pub struct TotalDamageDone(pub u32);
 
 fn collect_damage_done(
     mut damage_events: EventReader<DamageEvent>,
@@ -33,10 +37,19 @@ fn collect_damage_done(
 // struct TotalHealthLost(u32);
 
 #[derive(Resource)]
-struct TotalEnemiesKilled(u32);
+pub struct TotalEnemiesKilled(pub u32);
+
+fn count_deaths(
+    mut deaths: EventReader<DeathEvent>,
+    mut enemies_killed: ResMut<TotalEnemiesKilled>,
+) {
+    for death in deaths.read() {
+        enemies_killed.0 += 1;
+    }
+}
 
 #[derive(Resource)]
-struct TotalBulletsFired(u32);
+pub struct TotalBulletsFired(pub u32);
 
 #[derive(Resource)]
 pub struct EnemiesStillAlive(pub u32);

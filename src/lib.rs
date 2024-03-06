@@ -4,6 +4,7 @@ mod actions;
 mod audio;
 pub mod background_image;
 mod clouds;
+mod end_game;
 pub mod enemy;
 pub mod follow_camera;
 pub mod health;

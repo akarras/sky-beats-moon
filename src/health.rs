@@ -71,7 +71,7 @@ fn check_dead(
     }
 }
 
-fn apply_dead_texture(mut images: Query<(&mut Handle<Image>, &DeadTexture), Changed<Dead>>) {
+fn apply_dead_texture(mut images: Query<(&mut Handle<Image>, &DeadTexture), Added<Dead>>) {
     for (mut image, dead_texture) in images.iter_mut() {
         *image = dead_texture.0.clone();
     }
