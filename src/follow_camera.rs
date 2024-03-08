@@ -2,7 +2,7 @@ use std::ops::Neg;
 
 use bevy::prelude::*;
 
-use crate::{actions::Actions, player::Player, weapon::Velocity, GameState};
+use crate::{actions::Actions, player::Player, weapon::Velocity, GameState, GameSystems};
 
 pub struct FollowCameraPlugin;
 
@@ -14,7 +14,9 @@ impl Plugin for FollowCameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (scale_camera, follow_camera).run_if(in_state(GameState::Playing)),
+            (scale_camera, follow_camera)
+                .after(GameSystems::Movement)
+                .run_if(in_state(GameState::Playing)),
         );
     }
 }

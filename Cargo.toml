@@ -40,14 +40,14 @@ dev = [
 #   and android_shared_stdcxx, since that is covered in `mobile`
 [dependencies]
 bevy = { version = "0.13", default-features = false, features = [
-    "animation",
+    #"animation",
     "bevy_asset",
     "bevy_gilrs",
     "bevy_scene",
     "bevy_winit",
     "bevy_core_pipeline",
-    "bevy_pbr",
-    "bevy_gltf",
+    #"bevy_pbr",
+    #"bevy_gltf",
     "bevy_render",
     "bevy_sprite",
     "bevy_text",

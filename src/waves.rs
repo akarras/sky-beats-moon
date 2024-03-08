@@ -9,6 +9,7 @@ pub struct WavesPlugin;
 impl Plugin for WavesPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(WaveTimer(0.0))
+            .add_systems(OnEnter(GameState::Menu), reset_timer)
             .add_systems(Update, increment_timer.run_if(in_state(GameState::Playing)));
     }
 }
@@ -18,4 +19,8 @@ pub struct WaveTimer(pub f32);
 
 fn increment_timer(mut wave_timer: ResMut<WaveTimer>, time: Res<Time>) {
     wave_timer.0 += time.delta_seconds();
+}
+
+fn reset_timer(mut timer: ResMut<WaveTimer>) {
+    timer.0 = 0.0;
 }

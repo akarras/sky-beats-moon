@@ -5,7 +5,13 @@ use bevy_rand::{prelude::WyRand, resource::GlobalEntropy};
 use rand::Rng;
 
 use crate::{
-    health::{DeadTexture, DespawnTimer, Health, MaxHealth}, leveling::XpWorth, loading::TextureAssets, player::{OrientTowardsVelocity, Player}, power_ups::{PowerUpType, Powerup, Powerups}, weapon::{Coord2D, Hostile, Target, TargetVector, Velocity}, GameState
+    health::{DeadTexture, DespawnTimer, Health, MaxHealth},
+    leveling::XpWorth,
+    loading::TextureAssets,
+    player::{OrientTowardsVelocity, Player},
+    power_ups::{PowerUpType, Powerup, Powerups},
+    weapon::{Coord2D, Hostile, Target, TargetVector, Velocity},
+    GameState,
 };
 
 pub struct EnemyPlugin;
@@ -101,7 +107,7 @@ fn spawn_enemies(
                     TargetVector(None),
                     OrientTowardsVelocity,
                     DeadTexture(textures.red_plane_dead.clone()),
-                    XpWorth(10)
+                    XpWorth(10),
                 ));
             }
         }

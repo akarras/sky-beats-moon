@@ -1,7 +1,13 @@
 use bevy::prelude::*;
 
 use crate::{
-    health::{Health, MaxHealth}, leveling::{xp_required_for_level, Level, Xp}, overshield::OvershieldState, player::Player, stats::{EnemiesStillAlive, TotalEnemiesKilled}, waves::WaveTimer, GameState, GameSystems
+    health::{Health, MaxHealth},
+    leveling::{xp_required_for_level, Level, Xp},
+    overshield::OvershieldState,
+    player::Player,
+    stats::{EnemiesStillAlive, TotalEnemiesKilled},
+    waves::WaveTimer,
+    GameState, GameSystems,
 };
 
 pub struct HudPlugin;
@@ -168,17 +174,17 @@ fn update_shield_bar(
 
 fn update_xp_bar(
     mut xp_bar: Query<&mut Style, With<XpBar>>,
-    xp: Query<(&Xp, &Level), (Or<(Changed<Xp>, Changed<Level>)>, With<Player>)>) {
-        for (xp, level) in xp.iter() {
-            for mut bar in xp_bar.iter_mut() {
-                let required_xp = xp_required_for_level(level);
-                bar.width = Val::Vw((xp.0 / required_xp.0) as f32 * 100.0);
-            }
+    xp: Query<(&Xp, &Level), (Or<(Changed<Xp>, Changed<Level>)>, With<Player>)>,
+) {
+    for (xp, level) in xp.iter() {
+        for mut bar in xp_bar.iter_mut() {
+            let required_xp = xp_required_for_level(level);
+            let width = (xp.0 as f32 / required_xp.0 as f32) * 100.0;
+            info!("XP bar: {}/{} {}", xp.0, required_xp.0, width);
+            bar.width = Val::Vw(width);
         }
     }
-
-#[derive(Component)]
-struct TimerUi;
+}
 
 #[derive(Component)]
 struct TimerText;

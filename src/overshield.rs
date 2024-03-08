@@ -32,15 +32,23 @@ pub struct OvershieldState {
 /// Inserts a new overshield state anytime the overshield gets updated
 fn reset_overshield_state(
     mut commands: Commands,
-    overshield: Query<(Entity, &Overshield), Changed<Overshield>>,
+    mut overshield: Query<(Entity, &Overshield, Option<&mut OvershieldState>), Changed<Overshield>>,
 ) {
-    for (entity, overshield) in overshield.iter() {
+    for (entity, overshield, state) in overshield.iter_mut() {
         let level = overshield.0;
-        commands.entity(entity).insert(OvershieldState {
-            max_overshield: level as i32 * 100,
-            current_overshield: level as i32 * 100,
-            secs_until_recharge: 0.0,
-        });
+        let max_overshield = level as i32 * 100;
+        if let Some(mut state) = state {
+            if state.max_overshield != max_overshield {
+                state.max_overshield = max_overshield;
+                state.current_overshield = max_overshield;
+            }
+        } else {
+            commands.entity(entity).insert(OvershieldState {
+                max_overshield: level as i32 * 100,
+                current_overshield: level as i32 * 100,
+                secs_until_recharge: 0.0,
+            });
+        }
     }
 }
 

@@ -30,7 +30,6 @@ pub struct Actions {
     pub camera_zoom: Option<f32>,
 }
 
-
 pub fn set_movement_actions(
     mut actions: ResMut<Actions>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -62,7 +61,8 @@ pub fn set_movement_actions(
     } else {
         if let Some(touch_position) = touch_input.first_pressed_position() {
             let (camera, camera_transform) = camera.single();
-            if let Some(touch_position) = camera.viewport_to_world_2d(camera_transform, touch_position)
+            if let Some(touch_position) =
+                camera.viewport_to_world_2d(camera_transform, touch_position)
             {
                 let diff = touch_position - player.single().translation.xy();
                 if diff.length() > FOLLOW_EPSILON {
@@ -82,5 +82,4 @@ pub fn set_movement_actions(
     } else {
         actions.player_movement = None;
     }
-    
 }

@@ -64,7 +64,7 @@ fn spawn_player(
             OrientTowardsVelocity,
             DeadTexture(textures.player_dead.clone()),
             Xp(0),
-            Level(1)
+            Level(1),
         ))
         .insert(Player);
     next_state.set(GameState::Chooser);

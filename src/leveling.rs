@@ -8,8 +8,7 @@ impl Plugin for LevelSystemPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             FixedUpdate,
-            (award_player_xp, run_level_ups)
-                .run_if(in_state(GameState::Playing)),
+            (award_player_xp, run_level_ups).run_if(in_state(GameState::Playing)),
         );
     }
 }
@@ -32,8 +31,8 @@ fn award_player_xp(
     for events in death_events.read() {
         if let Ok(xp_value) = enemies.get(events.0) {
             if let Ok(mut player) = player.get_single_mut() {
-                info!("Gained {}xp", xp_value.0);
                 player.0 += xp_value.0;
+                info!("Gained {}xp {}", xp_value.0, player.0);
             }
         }
     }
@@ -48,13 +47,16 @@ fn run_level_ups(
         if xp.0 >= needed_xp.0 {
             level.0 += 1;
             xp.0 -= needed_xp.0;
-            info!("Leveled up! xp: {} level: {}. needed xp: {}", xp.0, level.0, needed_xp.0);
+            info!(
+                "Leveled up! xp: {} level: {}. needed xp: {}",
+                xp.0, level.0, needed_xp.0
+            );
             next_state.set(GameState::Chooser);
         }
     }
 }
 
 pub fn xp_required_for_level(level: &Level) -> Xp {
-    let xp_required = level.0.saturating_pow(2);
-    Xp(xp_required)
+    let xp_required = 71.429 * (level.0 as f32).powf(2.0) + 190.0;
+    Xp(xp_required as i32)
 }

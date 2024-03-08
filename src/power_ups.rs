@@ -21,6 +21,7 @@ impl Plugin for PowerupPlugin {
             Update,
             (spawn_pickup, player_pickup, powerup_manager).run_if(in_state(GameState::Playing)),
         )
+        .add_systems(OnEnter(GameState::Menu), cleanup_pickups)
         .add_systems(OnEnter(GameState::Chooser), add_choice_menu)
         .add_systems(OnExit(GameState::Chooser), remove_choice_menu)
         .add_systems(Update, choices.run_if(in_state(GameState::Chooser)));
@@ -52,6 +53,12 @@ fn spawn_pickup(
                 ));
             }
         }
+    }
+}
+
+fn cleanup_pickups(mut commands: Commands, pickups: Query<Entity, With<Pickup>>) {
+    for pickup in pickups.iter() {
+        commands.entity(pickup).despawn();
     }
 }
 

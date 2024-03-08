@@ -18,9 +18,6 @@ bevy = { version = "0.13", default-features = false }
 version = "0.15"
 features = ["oboe-shared-stdcxx"]
 
-[profile.dev]
-opt-level = 3
-
 [package.metadata.android]
 package = "com.akarras.bevygame"  # ToDo
 apk_name = "BevyGame"  # ToDo same as GAME_OSX_APP_NAME in release workflow
