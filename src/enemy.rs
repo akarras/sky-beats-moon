@@ -38,6 +38,7 @@ fn cleanup_enemies(mut commands: Commands, enemies: Query<Entity, With<Enemy>>) 
 pub struct Spawner {
     respawn_rate: f64,
     spawn_range: RangeInclusive<f32>,
+    num_enemies: u32
 }
 
 fn create_spawner(mut commands: Commands) {
@@ -45,14 +46,17 @@ fn create_spawner(mut commands: Commands) {
         (Spawner {
             respawn_rate: 1.0,
             spawn_range: 1000.0..=6000.0,
+            num_enemies: 100,
         },),
         (Spawner {
             respawn_rate: 2.0,
             spawn_range: 1000.0..=10000.0,
+            num_enemies: 100,
         },),
         (Spawner {
             respawn_rate: 2.0,
             spawn_range: 1000.0..=100000.0,
+            num_enemies: 100,
         },),
     ]);
 }
