@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    actions::Actions,
     health::{Health, MaxHealth},
     leveling::{xp_required_for_level, Level, Xp},
     overshield::OvershieldState,
@@ -46,19 +47,22 @@ struct EnemyCounter;
 #[derive(Component)]
 struct XpBar;
 
-fn add_hud(mut commands: Commands) {
+fn add_hud(mut commands: Commands, controls: Res<Actions>) {
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                align_items: AlignItems::Start,
-                justify_items: JustifyItems::Start,
-                flex_direction: FlexDirection::Column,
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    align_items: AlignItems::Start,
+                    justify_items: JustifyItems::Start,
+                    flex_direction: FlexDirection::Column,
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        })
+            Hud,
+        ))
         .with_children(|children| {
             children.spawn((
                 NodeBundle {
@@ -144,6 +148,34 @@ fn add_hud(mut commands: Commands) {
                     ));
                 });
         });
+    if controls.touch_detected {
+        commands
+            .spawn((
+                NodeBundle {
+                    style: Style {
+                        position_type: PositionType::Absolute,
+                        bottom: Val::Px(100.0),
+                        width: Val::Vw(100.0),
+                        height: Val::Px(100.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                Hud,
+            ))
+            .with_children(|children| {
+                children.spawn(TextBundle::from_section(
+                    "0",
+                    TextStyle {
+                        font_size: 30.0,
+                        color: Color::WHITE,
+                        ..Default::default()
+                    },
+                ));
+            });
+    }
 }
 
 fn update_health_bar(
@@ -180,7 +212,6 @@ fn update_xp_bar(
         for mut bar in xp_bar.iter_mut() {
             let required_xp = xp_required_for_level(level);
             let width = (xp.0 as f32 / required_xp.0 as f32) * 100.0;
-            info!("XP bar: {}/{} {}", xp.0, required_xp.0, width);
             bar.width = Val::Vw(width);
         }
     }
@@ -219,8 +250,8 @@ fn update_enemy_counter_text(
     }
 }
 
-fn remove_hud(mut commands: Commands, healthbar: Query<Entity, With<Hud>>) {
-    for healthbar in healthbar.iter() {
-        commands.entity(healthbar).despawn_recursive();
+fn remove_hud(mut commands: Commands, hud: Query<Entity, With<Hud>>) {
+    for hud in hud.iter() {
+        commands.entity(hud).despawn_recursive();
     }
 }

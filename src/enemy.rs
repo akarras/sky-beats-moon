@@ -5,11 +5,10 @@ use bevy_rand::{prelude::WyRand, resource::GlobalEntropy};
 use rand::Rng;
 
 use crate::{
-    health::{DeadTexture, DespawnTimer, Health, MaxHealth},
+    health::{DeadTexture, Health, MaxHealth},
     leveling::XpWorth,
     loading::TextureAssets,
     player::{OrientTowardsVelocity, Player},
-    power_ups::{PowerUpType, Powerup, Powerups},
     weapon::{
         Bile, ConstantAcceleration, Coord2D, Hostile, PeaShooter, Sniper, Target, TargetVector,
         VMax, Velocity,
@@ -103,7 +102,7 @@ impl RedPlaneBundle {
                 ..Default::default()
             },
             tags: (Enemy, Hostile),
-            health: HealthBundle::new(20),
+            health: HealthBundle::new(5),
             target: Target(Some(target)),
             target_vector: TargetVector(None),
             pea_shooter: PeaShooter::new(0),
@@ -193,7 +192,7 @@ impl SailboatBundle {
                 ..Default::default()
             },
             tags: Default::default(),
-            health: HealthBundle::new(2),
+            health: HealthBundle::new(20),
             target: Target(Some(target)),
             target_vector: TargetVector(None),
             orient_towards_velocity: OrientTowardsVelocity,

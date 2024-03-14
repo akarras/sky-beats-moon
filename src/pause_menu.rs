@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{input::keyboard::NativeKeyCode, prelude::*};
 
 use crate::GameState;
 
@@ -87,13 +87,23 @@ fn cleanup_pause_menu(mut commands: Commands, pause_menu: Query<Entity, With<Pau
 }
 
 fn pause_menu_key(keys: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
-    if keys.just_pressed(KeyCode::Escape) || keys.just_pressed(KeyCode::BrowserBack) {
+    let just_pressed = keys.get_just_pressed().collect::<Vec<_>>();
+    if !just_pressed.is_empty() {
+        info!("{just_pressed:?}");
+    }
+    if keys.just_pressed(KeyCode::Escape)
+        || keys.just_pressed(KeyCode::BrowserBack)
+        || keys.just_pressed(KeyCode::Unidentified(NativeKeyCode::Android(4)))
+    {
         next_state.set(GameState::Paused);
     }
 }
 
 fn unpause_menu_key(keys: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
-    if keys.just_pressed(KeyCode::Escape) || keys.just_pressed(KeyCode::BrowserBack) {
+    if keys.just_pressed(KeyCode::Escape)
+        || keys.just_pressed(KeyCode::BrowserBack)
+        || keys.just_pressed(KeyCode::Unidentified(NativeKeyCode::Android(4)))
+    {
         next_state.set(GameState::Playing);
     }
 }

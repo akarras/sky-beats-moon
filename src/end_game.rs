@@ -43,11 +43,11 @@ fn add_death_screen(
         .spawn((
             NodeBundle {
                 style: Style {
-                    height: Val::Vh(50.0),
-                    width: Val::Vw(50.0),
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
-                    justify_items: JustifyItems::Center,
+                    justify_content: JustifyContent::Center,
                     ..Default::default()
                 },
                 ..Default::default()

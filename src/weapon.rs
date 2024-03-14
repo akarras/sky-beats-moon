@@ -43,7 +43,8 @@ impl Plugin for WeaponPlugin {
                 shoot_basic_gun::<Sniper>,
                 shoot_basic_gun::<Bile>,
             )
-                .run_if(in_state(GameState::Playing)),
+                .run_if(in_state(GameState::Playing))
+                .after(GameSystems::Collision),
         )
         .add_systems(OnEnter(GameState::Menu), cleanup_projectiles);
     }
@@ -265,7 +266,7 @@ fn update_target_vectors(
                     vector.0 = target_distance
                         .map(|t| t.0 > direction_2d.length())
                         .unwrap_or(true)
-                        .then(|| direction_2d.normalize());
+                        .then(|| direction_2d);
                 }
             }
         });
@@ -419,23 +420,11 @@ impl Sniper {
 
 impl BasicGun for Sniper {
     fn cooldown(&self) -> f32 {
-        match self.level {
-            0 => 5.0,
-            1 => 5.0,
-            2 => 5.0,
-            3 => 5.0,
-            4 => 4.0,
-            5 => 3.0,
-            _ => 2.0,
-        }
+        (1.0 / (self.level.min(2) as f32).log10()).max(3.0)
     }
 
     fn damage(&self) -> i32 {
-        match self.level {
-            0..=2 => 100,
-            3..=5 => 100,
-            _ => 6,
-        }
+        (self.level as i32).min(1) * 20
     }
 
     fn projectile_velocity(&self) -> f32 {
@@ -443,7 +432,7 @@ impl BasicGun for Sniper {
     }
 
     fn health(&self) -> i32 {
-        10
+        (self.level as i32).min(2) * 2
     }
 
     fn projectile_sprite(assets: &Res<TextureAssets>) -> Handle<Image> {
@@ -455,7 +444,7 @@ impl BasicGun for Sniper {
     }
 
     fn bullet_lifespan(&self) -> f32 {
-        10.0
+        (self.level as f32).min(10.0)
     }
 }
 
@@ -476,16 +465,16 @@ impl Bile {
 
 impl BasicGun for Bile {
     fn cooldown(&self) -> f32 {
-        const COOLDOWNS: &[f32] = &[0.2, 0.15, 0.15, 0.12, 0.1, 0.1];
-        COOLDOWNS.get(self.level as usize).copied().unwrap_or(0.1)
+        const COOLDOWNS: &[f32] = &[0.2, 0.15, 0.15, 0.12, 0.1, 0.1, 0.01];
+        COOLDOWNS.get(self.level as usize).copied().unwrap_or(0.01)
     }
 
     fn damage(&self) -> i32 {
-        1
+        (self.level as i32).min(1)
     }
 
     fn projectile_velocity(&self) -> f32 {
-        100.0
+        250.0
     }
 
     fn projectile_sprite(assets: &Res<TextureAssets>) -> Handle<Image> {
@@ -497,17 +486,17 @@ impl BasicGun for Bile {
     }
 
     fn health(&self) -> i32 {
-        1
+        (self.level as i32).min(1)
     }
 
     fn bullet_lifespan(&self) -> f32 {
-        0.5
+        0.2
     }
 }
 
 fn shoot_basic_gun<T>(
     commands: ParallelCommands,
-    mut machine_gun: Query<
+    mut gun_query: Query<
         (
             Entity,
             &TargetVector,
@@ -525,10 +514,12 @@ fn shoot_basic_gun<T>(
     T: Component + BasicGun + Sized,
 {
     let dt = time.delta_seconds();
-    machine_gun.par_iter_mut().for_each(
+    gun_query.par_iter_mut().for_each(
         |(fired_by, vector, mut gun, transform, munitions, friendly, enemy)| {
             if let Some(target_vector) = vector.0 {
-                if *gun.cooldown_remaining() <= 0.0 {
+                let target_distance = target_vector.length();
+                let estimated_distance = gun.bullet_lifespan() * gun.projectile_velocity() * 2.0;
+                if *gun.cooldown_remaining() <= 0.0 && target_distance < estimated_distance {
                     *gun.cooldown_remaining() = gun.cooldown();
                     let death_texture = textures.bullet_impact.clone();
                     commands.command_scope(|mut cmd| {
@@ -544,7 +535,7 @@ fn shoot_basic_gun<T>(
                                     * munitions.map(|m| m.damage_mult()).unwrap_or(1),
                                 size: 40.0,
                             },
-                            Velocity(target_vector * gun.projectile_velocity()),
+                            Velocity(target_vector.normalize() * gun.projectile_velocity()),
                             Health(gun.health()),
                             DeathParticles(Some(Box::new(move |cmds, transform| {
                                 cmds.spawn((

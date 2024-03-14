@@ -40,7 +40,9 @@ fn award_player_xp(
     player: Query<Entity, With<Player>>,
     textures: Res<TextureAssets>,
 ) {
-    let player = player.get_single().unwrap();
+    let Ok(player) = player.get_single() else {
+        return;
+    };
     for events in death_events.read() {
         if let Ok((transform, xp)) = enemies.get(events.0) {
             commands.spawn((

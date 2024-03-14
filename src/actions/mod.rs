@@ -2,12 +2,9 @@ use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
 
 use crate::actions::game_control::{get_movement, GameControl};
-use crate::player::Player;
 use crate::{GameState, GameSystems};
 
 mod game_control;
-
-pub const FOLLOW_EPSILON: f32 = 5.;
 
 pub struct ActionsPlugin;
 
@@ -28,15 +25,15 @@ impl Plugin for ActionsPlugin {
 pub struct Actions {
     pub player_movement: Option<Vec2>,
     pub camera_zoom: Option<f32>,
+    pub touch_detected: bool,
 }
 
 pub fn set_movement_actions(
     mut actions: ResMut<Actions>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     touch_input: Res<Touches>,
-    player: Query<&Transform, With<Player>>,
     mut mouse_scroll: EventReader<MouseWheel>,
-    camera: Query<(&Camera, &GlobalTransform), With<Camera2d>>,
+    camera: Query<&Camera, With<Camera2d>>,
 ) {
     let mut player_movement = Vec2::new(
         get_movement(GameControl::Right, &keyboard_input)
@@ -56,18 +53,17 @@ pub fn set_movement_actions(
         let diff = current_distance.length() - previous_distance.length();
         info!("Diff {diff}");
         if diff.abs() > 0.01 {
-            zoom = Some(diff / 100.0);
+            zoom = Some(-diff / 100.0);
         }
     } else {
         if let Some(touch_position) = touch_input.first_pressed_position() {
-            let (camera, camera_transform) = camera.single();
-            if let Some(touch_position) =
-                camera.viewport_to_world_2d(camera_transform, touch_position)
-            {
-                let diff = touch_position - player.single().translation.xy();
-                if diff.length() > FOLLOW_EPSILON {
-                    player_movement = diff.normalize();
-                }
+            actions.touch_detected = true;
+            let camera = camera.single();
+            if let Some(viewport_size) = camera.logical_viewport_size() {
+                let joystick_position = Vec2::new(viewport_size.x / 2.0, viewport_size.y - 100.0);
+                let joystick_offset = touch_position - joystick_position;
+                player_movement = joystick_offset.normalize();
+                player_movement.y = -player_movement.y;
             }
         }
     }

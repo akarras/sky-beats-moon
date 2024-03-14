@@ -59,24 +59,24 @@ const WAVES: &[WaveTimelineMarker] = &[
             spawn_range: 500.0..=1000.0,
             enemies_spawned_per_interval: 1,
             num_enemies: 100,
-            interval: 20.0,
+            interval: 2.0,
             current_interval: 0.0,
             enemy_type: EnemyType::RedPlane,
         }),
     },
     WaveTimelineMarker {
-        run_at_secs: 1.0,
+        run_at_secs: 30.0,
         event: WaveTimelineEvent::SpawnEnemies(Spawner {
             spawn_range: 1000.0..=2000.0,
             enemies_spawned_per_interval: 2,
             num_enemies: 1000,
-            interval: 20.0,
+            interval: 2.0,
             current_interval: 0.0,
             enemy_type: EnemyType::RedPlane,
         }),
     },
     WaveTimelineMarker {
-        run_at_secs: 10.0,
+        run_at_secs: 60.0,
         event: WaveTimelineEvent::SpawnEnemies(Spawner {
             spawn_range: 1000.0..=1000.0,
             enemies_spawned_per_interval: 10,
@@ -84,6 +84,17 @@ const WAVES: &[WaveTimelineMarker] = &[
             interval: 10.0,
             current_interval: 10.0,
             enemy_type: EnemyType::Mosquito,
+        }),
+    },
+    WaveTimelineMarker {
+        run_at_secs: 90.0,
+        event: WaveTimelineEvent::SpawnEnemies(Spawner {
+            spawn_range: 1000.0..=1000.0,
+            enemies_spawned_per_interval: 5,
+            num_enemies: 1000,
+            interval: 10.0,
+            current_interval: 10.0,
+            enemy_type: EnemyType::SailBoat,
         }),
     },
 ];
