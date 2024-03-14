@@ -31,7 +31,6 @@ fn spawn_clouds(
     let number_of_clouds = rand.gen_range(1..200);
     let mut rand = &mut *rand;
     let clouds = (0..number_of_clouds)
-        .into_iter()
         .map(|_i| {
             let velocity = Vec2::new(
                 rand.gen_range(-wind_speed..wind_speed),

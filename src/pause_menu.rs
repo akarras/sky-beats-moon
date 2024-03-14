@@ -73,9 +73,8 @@ fn handle_main_menu_clicks(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     for interaction in interactions.iter() {
-        match interaction {
-            Interaction::Pressed => next_state.set(GameState::Menu),
-            _ => {}
+        if let Interaction::Pressed = interaction {
+            next_state.set(GameState::Menu)
         }
     }
 }

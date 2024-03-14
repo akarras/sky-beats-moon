@@ -55,16 +55,14 @@ pub fn set_movement_actions(
         if diff.abs() > 0.01 {
             zoom = Some(-diff / 100.0);
         }
-    } else {
-        if let Some(touch_position) = touch_input.first_pressed_position() {
-            actions.touch_detected = true;
-            let camera = camera.single();
-            if let Some(viewport_size) = camera.logical_viewport_size() {
-                let joystick_position = Vec2::new(viewport_size.x / 2.0, viewport_size.y - 100.0);
-                let joystick_offset = touch_position - joystick_position;
-                player_movement = joystick_offset.normalize();
-                player_movement.y = -player_movement.y;
-            }
+    } else if let Some(touch_position) = touch_input.first_pressed_position() {
+        actions.touch_detected = true;
+        let camera = camera.single();
+        if let Some(viewport_size) = camera.logical_viewport_size() {
+            let joystick_position = Vec2::new(viewport_size.x / 2.0, viewport_size.y - 100.0);
+            let joystick_offset = touch_position - joystick_position;
+            player_movement = joystick_offset.normalize();
+            player_movement.y = -player_movement.y;
         }
     }
     for scroll in mouse_scroll.read() {

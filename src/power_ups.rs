@@ -94,13 +94,10 @@ fn choices(
     mut state: ResMut<NextState<GameState>>,
 ) {
     for (button, choice) in buttons.iter() {
-        match button {
-            Interaction::Pressed => {
-                let mut player = player.single_mut();
-                player.add_powerup(choice.0);
-                state.set(GameState::Playing);
-            }
-            _ => {}
+        if let Interaction::Pressed = button {
+            let mut player = player.single_mut();
+            player.add_powerup(choice.0);
+            state.set(GameState::Playing);
         }
     }
 }

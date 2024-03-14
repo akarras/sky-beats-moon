@@ -87,11 +87,8 @@ fn main_menu_handler(
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     for button in menu_button.iter() {
-        match button {
-            Interaction::Pressed => {
-                next_state.set(GameState::Menu);
-            }
-            _ => {}
+        if let Interaction::Pressed = button {
+            next_state.set(GameState::Menu);
         }
     }
 }

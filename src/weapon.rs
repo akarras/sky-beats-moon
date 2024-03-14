@@ -266,7 +266,7 @@ fn update_target_vectors(
                     vector.0 = target_distance
                         .map(|t| t.0 > direction_2d.length())
                         .unwrap_or(true)
-                        .then(|| direction_2d);
+                        .then_some(direction_2d);
                 }
             }
         });
@@ -298,7 +298,7 @@ pub struct MachineGun {
 impl MachineGun {
     pub fn new(level: u8) -> Self {
         MachineGun {
-            level: level,
+            level,
             cooldown_remaining: 0.5,
         }
     }
@@ -355,7 +355,7 @@ pub struct PeaShooter {
 impl PeaShooter {
     pub fn new(level: u8) -> Self {
         PeaShooter {
-            level: level,
+            level,
             cooldown_remaining: 0.5,
         }
     }
@@ -412,7 +412,7 @@ pub struct Sniper {
 impl Sniper {
     pub fn new(level: u8) -> Self {
         Sniper {
-            level: level,
+            level,
             cooldown_remaining: 0.5,
         }
     }
