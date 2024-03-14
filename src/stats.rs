@@ -56,10 +56,13 @@ pub struct TotalEnemiesKilled(pub u32);
 
 fn count_deaths(
     mut deaths: EventReader<DeathEvent>,
+    enemies: Query<&Enemy>,
     mut enemies_killed: ResMut<TotalEnemiesKilled>,
 ) {
-    for _death in deaths.read() {
-        enemies_killed.0 += 1;
+    for death in deaths.read() {
+        if let Ok(_enemy) = enemies.get(death.0) {
+            enemies_killed.0 += 1;
+        }
     }
 }
 

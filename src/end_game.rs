@@ -43,8 +43,8 @@ fn add_death_screen(
         .spawn((
             NodeBundle {
                 style: Style {
-                    height: Val::Vh(100.0),
-                    width: Val::Vw(100.0),
+                    height: Val::Vh(50.0),
+                    width: Val::Vw(50.0),
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
                     justify_items: JustifyItems::Center,
@@ -59,6 +59,7 @@ fn add_death_screen(
             children
                 .spawn((
                     ButtonBundle {
+                        background_color: BackgroundColor(Color::DARK_GREEN),
                         ..Default::default()
                     },
                     MainMenuButton,

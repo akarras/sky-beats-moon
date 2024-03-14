@@ -1,8 +1,9 @@
-use std::ops::RangeInclusive;
-
 use bevy::prelude::*;
 
-use crate::{GameState, GameSystems};
+use crate::{
+    enemy::{EnemyType, Spawner},
+    GameState, GameSystems,
+};
 /// Waves
 /// 30 minute timer
 /// Every 5 minutes, introduce new enemy type, increase # of enemies spawned every minute.
@@ -10,90 +11,78 @@ pub struct WavesPlugin;
 
 impl Plugin for WavesPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(WaveTimer(0.0))
+        app.insert_resource(WaveTimer::default())
             .add_systems(OnEnter(GameState::Menu), reset_timer)
-            .add_systems(Update, increment_timer.run_if(in_state(GameState::Playing)).after(GameSystems::Movement));
+            .add_systems(
+                Update,
+                increment_timer
+                    .run_if(in_state(GameState::Playing))
+                    .after(GameSystems::Movement),
+            );
     }
 }
 
-#[derive(Resource)]
-pub struct WaveTimer(pub f32);
+#[derive(Resource, Default)]
+pub struct WaveTimer {
+    pub current_time: f32,
+    search_index: usize,
+}
 
 fn increment_timer(mut commands: Commands, mut wave_timer: ResMut<WaveTimer>, time: Res<Time>) {
-    let start_time = wave_timer.0;
-    wave_timer.0 += time.delta_seconds();
-    let new_time = wave_timer.0;
-    WAVES.iter().skip_while(|w| w.run_at_secs < start_time).take_while(|w| w.run_at_secs < new_time).for_each(|value| {
-        value.event.spawn(&mut commands);
-    });
-    
-}
-
-fn reset_timer(mut timer: ResMut<WaveTimer>) {
-    timer.0 = 0.0;
-}
-
-const WAVES: &[WaveTimelineMarker] = &[WaveTimelineMarker { run_at_secs: 0.0, event: WaveTimelineEvent::SpawnEnemies(SpawnInfo { t: EnemyType::Red, count: 10, location: SpawnLocation::AroundPlayer { distance_range: 100.0..=1000.0 } }) }];
-
-#[derive(Clone, Copy)]
-enum EnemyType {
-    Red
-}
-
-
-#[derive(Clone)]
-enum SpawnLocation {
-    /// Spawns enemies randomly around the player within the given range
-    AroundPlayer {
-        distance_range: RangeInclusive<f32>,
-    },
-}
-
-#[derive(Event)]
-struct SpawnAroundPlayerEvent {
-    t: EnemyType,
-    count: u32,
-    range: RangeInclusive<f32>
-}
-
-#[derive(Clone)]
-struct SpawnInfo {
-    /// Type of enemy to spawn
-    t: EnemyType,
-    /// Number of enemies to spawn
-    count: u32,
-    /// Where to spawn enemies
-    location: SpawnLocation
-}
-
-impl SpawnInfo {
-    fn create_events(&self, commands: EventWriter<Spawn>) {
-        let Self { t, count, location } = self.clone();
-        match location {
-            SpawnLocation::AroundPlayer { distance_range } => {
-                
-                SpawnAroundPlayerEvent { t, count, range: distance_range };
-            },
+    wave_timer.current_time += time.delta_seconds();
+    let new_time = wave_timer.current_time;
+    let Some(waves) = WAVES.as_ref().get(wave_timer.search_index..) else {
+        return;
+    };
+    for wave in waves {
+        if wave.run_at_secs < new_time {
+            match &wave.event {
+                WaveTimelineEvent::SpawnEnemies(spawner) => {
+                    commands.spawn(spawner.clone());
+                }
+            }
+            wave_timer.search_index += 1;
+        } else {
+            break;
         }
     }
 }
+
+fn reset_timer(mut timer: ResMut<WaveTimer>) {
+    *timer = Default::default();
+}
+
+const WAVES: &[WaveTimelineMarker] = &[
+    WaveTimelineMarker {
+        run_at_secs: 0.0,
+        event: WaveTimelineEvent::SpawnEnemies(Spawner {
+            spawn_range: 1000.0..=2000.0,
+            enemies_spawned_per_interval: 2,
+            num_enemies: 1000,
+            interval: 2.0,
+            current_interval: 0.0,
+            enemy_type: EnemyType::RedPlane,
+        }),
+    },
+    WaveTimelineMarker {
+        run_at_secs: 0.0,
+        event: WaveTimelineEvent::SpawnEnemies(Spawner {
+            spawn_range: 500.0..=500.0,
+            enemies_spawned_per_interval: 10,
+            num_enemies: 1000,
+            interval: 1.0,
+            current_interval: 1.0,
+            enemy_type: EnemyType::Mosquito,
+        }),
+    },
+];
 
 struct WaveTimelineMarker {
     /// Time in seconds to run this marker
     run_at_secs: f32,
-    event: WaveTimelineEvent
+    event: WaveTimelineEvent,
 }
 
 enum WaveTimelineEvent {
-    SpawnEnemies(SpawnInfo),
-}
-
-impl WaveTimelineEvent {
-    fn spawn(&self, commands: &mut Commands) {
-        match self {
-            WaveTimelineEvent::SpawnEnemies(enemies) => {
-                enemies.create_events(commands);
-            },
-        }
-    }
+    SpawnEnemies(Spawner),
 }

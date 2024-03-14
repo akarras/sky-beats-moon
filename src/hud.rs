@@ -191,8 +191,8 @@ struct TimerText;
 
 fn update_time_text(mut time: Query<&mut Text, With<TimerText>>, timer: Res<WaveTimer>) {
     for mut text in time.iter_mut() {
-        let seconds = timer.0 as i32 % 60;
-        let minutes = timer.0 as i32 / 60;
+        let seconds = timer.current_time as i32 % 60;
+        let minutes = timer.current_time as i32 / 60;
         *text = Text::from_section(
             format!("{minutes:0>2}:{seconds:0>2}"),
             TextStyle {

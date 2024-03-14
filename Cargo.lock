@@ -533,6 +533,7 @@ dependencies = [
  "enum-iterator",
  "image",
  "rand",
+ "torcurve-rs",
  "webbrowser",
  "winit",
 ]
@@ -3459,6 +3460,12 @@ dependencies = [
  "toml_datetime",
  "winnow",
 ]
+
+[[package]]
+name = "torcurve-rs"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e4f0027d2f8734efec0c2ce00d80169e54ab429b8b7f1154cb7ca965c8e63a7"
 
 [[package]]
 name = "tracing"

@@ -12,10 +12,10 @@ use crate::{
 
 pub struct WeaponPlugin;
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Friendly;
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Hostile;
 
 impl Plugin for WeaponPlugin {
@@ -56,11 +56,15 @@ pub struct Weapon {
     pub cooldown_left: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Velocity(pub Vec2);
 
 #[derive(Component)]
-pub struct ConstantAcceleration(f32);
+pub struct ConstantAcceleration(pub f32);
+
+/// The maximimum velocity
+#[derive(Component)]
+pub struct VMax(pub f32);
 
 #[derive(Component)]
 pub struct Projectile {
@@ -77,6 +81,9 @@ pub struct Target(pub Option<Entity>);
 /// The current vector that the target is located at
 #[derive(Component)]
 pub struct TargetVector(pub Option<Vec2>);
+
+#[derive(Component)]
+pub struct TargetDistance(pub f32);
 
 /// just tries to target the closest enemy
 fn update_player_target(
@@ -99,14 +106,19 @@ fn update_player_target(
 }
 
 fn update_acceleration(
-    mut velocities: Query<(&mut Velocity, &ConstantAcceleration)>,
+    mut velocities: Query<(&mut Velocity, &ConstantAcceleration, Option<&VMax>)>,
     time: Res<Time>,
 ) {
     let dt = time.delta_seconds();
-    velocities.par_iter_mut().for_each(|(mut velocity, accel)| {
-        let vel = velocity.0;
-        velocity.0 += vel * (dt * accel.0)
-    });
+    velocities
+        .par_iter_mut()
+        .for_each(|(mut velocity, accel, vmax)| {
+            let vel = velocity.0;
+            velocity.0 += vel * (dt * accel.0);
+            if let Some(vmax) = vmax {
+                velocity.0 = velocity.0.clamp_length_max(vmax.0);
+            }
+        });
 }
 
 fn apply_velocity(mut entities: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
@@ -229,17 +241,22 @@ fn check_bullet_collisions_teamed<A, B>(
 }
 
 fn update_target_vectors(
-    mut weapons: Query<(Entity, &mut TargetVector, &Target), Without<DespawnTimer>>,
+    mut weapons: Query<
+        (Entity, &mut TargetVector, &Target, Option<&TargetDistance>),
+        Without<DespawnTimer>,
+    >,
     transforms: Query<&Transform>,
 ) {
     weapons
         .par_iter_mut()
-        .for_each(|(current_entity, mut vector, target)| {
+        .for_each(|(current_entity, mut vector, target, target_distance)| {
             if let Some(target) = target.0 {
                 if let Ok([source, target]) = transforms.get_many([current_entity, target]) {
                     let direction = target.translation - source.translation;
                     let direction_2d = Vec2::new(direction.x, direction.y);
-                    vector.0 = (1000.0 * 1000.0 > direction_2d.length_squared())
+                    vector.0 = target_distance
+                        .map(|t| t.0 > direction_2d.length())
+                        .unwrap_or(true)
                         .then(|| direction_2d.normalize());
                 }
             }
