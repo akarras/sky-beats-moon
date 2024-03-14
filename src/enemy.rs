@@ -10,10 +10,12 @@ use crate::{
     loading::TextureAssets,
     player::{OrientTowardsVelocity, Player},
     power_ups::{PowerUpType, Powerup, Powerups},
-    weapon::{ConstantAcceleration, Coord2D, Hostile, Target, TargetVector, VMax, Velocity},
+    weapon::{
+        Bile, ConstantAcceleration, Coord2D, Hostile, PeaShooter, Sniper, Target, TargetVector,
+        VMax, Velocity,
+    },
     GameState,
 };
-use torcurve_rs::torcurve;
 
 pub struct EnemyPlugin;
 
@@ -83,7 +85,7 @@ struct RedPlaneBundle {
     target: Target,
     velocity: Velocity,
     target_vector: TargetVector,
-    powerups: Powerups,
+    pea_shooter: PeaShooter,
     death_texture: DeadTexture,
     orient_toward_velocity: OrientTowardsVelocity,
     xp_worth: XpWorth,
@@ -104,17 +106,7 @@ impl RedPlaneBundle {
             health: HealthBundle::new(20),
             target: Target(Some(target)),
             target_vector: TargetVector(None),
-            powerups: Powerups([
-                Some(Powerup {
-                    power: PowerUpType::PeaShooter,
-                    level: 0,
-                }),
-                None,
-                None,
-                None,
-                None,
-                None,
-            ]),
+            pea_shooter: PeaShooter::new(0),
             velocity: Velocity(velocity),
             death_texture: DeadTexture(textures.red_plane_dead.clone()),
             orient_toward_velocity: OrientTowardsVelocity,
@@ -139,13 +131,15 @@ struct MosquitoBundle {
     acceleration: ConstantAcceleration,
     vmax: VMax,
     velocity: Velocity,
+    dead_texture: DeadTexture,
+    bile: Bile,
 }
 
 impl MosquitoBundle {
     fn new(assets: &TextureAssets, target: Entity, transform: Transform) -> Self {
         MosquitoBundle {
             sprite: SpriteBundle {
-                texture: assets.bevy.clone(),
+                texture: assets.mosquito.clone(),
                 transform,
                 sprite: Sprite {
                     custom_size: Some(Vec2::splat(25.0)),
@@ -163,6 +157,53 @@ impl MosquitoBundle {
             acceleration: ConstantAcceleration(100.0),
             vmax: VMax(500.0),
             velocity: Velocity(Vec2::splat(0.01)),
+            dead_texture: DeadTexture(assets.mosquito_dead.clone()),
+            bile: Bile::new(0),
+        }
+    }
+}
+
+#[derive(Bundle)]
+struct SailboatBundle {
+    sprite: SpriteBundle,
+    tags: (Enemy, Hostile),
+    health: HealthBundle,
+    target: Target,
+    target_vector: TargetVector,
+    orient_towards_velocity: OrientTowardsVelocity,
+    xp_worth: XpWorth,
+    move_to_target: MoveToTarget,
+    acceleration: ConstantAcceleration,
+    vmax: VMax,
+    velocity: Velocity,
+    dead_texture: DeadTexture,
+    sniper: Sniper,
+}
+
+impl SailboatBundle {
+    fn new(assets: &TextureAssets, target: Entity, transform: Transform) -> Self {
+        Self {
+            sprite: SpriteBundle {
+                texture: assets.mosquito.clone(),
+                transform,
+                sprite: Sprite {
+                    custom_size: Some(Vec2::splat(25.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            tags: Default::default(),
+            health: HealthBundle::new(2),
+            target: Target(Some(target)),
+            target_vector: TargetVector(None),
+            orient_towards_velocity: OrientTowardsVelocity,
+            xp_worth: XpWorth(1),
+            move_to_target: MoveToTarget,
+            acceleration: ConstantAcceleration(100.0),
+            vmax: VMax(500.0),
+            velocity: Velocity(Vec2::splat(0.01)),
+            dead_texture: DeadTexture(assets.mosquito_dead.clone()),
+            sniper: Sniper::new(0),
         }
     }
 }
@@ -207,7 +248,9 @@ fn spawn_enemies(
                         EnemyType::Mosquito => {
                             commands.spawn(MosquitoBundle::new(&textures, player.0, transform));
                         }
-                        EnemyType::SailBoat => {}
+                        EnemyType::SailBoat => {
+                            SailboatBundle::new(&textures, player.0, transform);
+                        }
                     }
 
                     spawner.num_enemies -= 1;
@@ -217,22 +260,27 @@ fn spawn_enemies(
     }
 }
 
+#[inline]
+fn lerp_vec2(source: Vec2, target: Vec2, factor: f32) -> Vec2 {
+    Vec2::new(
+        source.x.lerp(target.x, factor),
+        source.y.lerp(target.y, factor),
+    )
+}
+
 fn move_towards_target(
-    mut current_enemies: Query<
-        (&mut Velocity, &TargetVector),
-        (With<MoveToTarget>, Without<DespawnTimer>),
-    >,
+    mut current_enemies: Query<(&mut Velocity, &TargetVector), With<MoveToTarget>>,
     time: Res<Time>,
 ) {
-    let _delta = time.delta_seconds();
+    let delta = time.delta_seconds();
+    let lerp_factor = 1.0 - 0.2_f32.powf(delta);
     current_enemies
         .par_iter_mut()
         .for_each(|(mut velocity, target_vector)| {
             let length = velocity.0.length();
             if let Some(target) = target_vector.0 {
-                if let Some(vec) = target_vector.0 {
-                    let target_rotation = vec * length;
-                }
+                velocity.0 =
+                    lerp_vec2(velocity.0.normalize(), target.normalize(), lerp_factor) * length;
             }
         });
 }

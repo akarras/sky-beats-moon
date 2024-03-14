@@ -9,7 +9,7 @@ use crate::{
     loading::TextureAssets,
     overshield::Overshield,
     player::Player,
-    weapon::{Coord2D, MachineGun, PeaShooter, Sniper, SpecialMunitions},
+    weapon::{Bile, Coord2D, MachineGun, PeaShooter, Sniper, SpecialMunitions},
     GameState,
 };
 
@@ -122,6 +122,7 @@ fn powerup_manager(
                 PowerUpType::Sniper => entity.insert(Sniper::new(level)),
                 PowerUpType::SpecialMunitions => entity.insert(SpecialMunitions::new(level)),
                 PowerUpType::Overshield => entity.insert(Overshield::new(level)),
+                PowerUpType::Bile => entity.insert(Bile::new(level)),
             };
         }
     }
@@ -259,6 +260,8 @@ pub enum PowerUpType {
     MachineGun,
     /// Shoots a single high power bullet
     Sniper,
+    /// Shoots a spray of green bile
+    Bile,
     // /// Passes through multiple enemies and curves back to you
     // Boomerrang,
     // /// Follows the heat signature of an enemy and explodes

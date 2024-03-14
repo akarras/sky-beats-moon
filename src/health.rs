@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{overshield::OvershieldState, GameState};
+use crate::{enemy::MoveToTarget, overshield::OvershieldState, GameState};
 
 pub struct HealthPlugin;
 
@@ -65,6 +65,7 @@ fn check_dead(
             commands
                 .entity(entity)
                 .remove::<Health>()
+                .remove::<MoveToTarget>()
                 .try_insert(DespawnTimer(10.0))
                 .try_insert(Dead);
         }

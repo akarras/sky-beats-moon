@@ -41,9 +41,17 @@ impl Plugin for WeaponPlugin {
                 shoot_basic_gun::<MachineGun>,
                 shoot_basic_gun::<PeaShooter>,
                 shoot_basic_gun::<Sniper>,
+                shoot_basic_gun::<Bile>,
             )
                 .run_if(in_state(GameState::Playing)),
-        );
+        )
+        .add_systems(OnEnter(GameState::Menu), cleanup_projectiles);
+    }
+}
+
+fn cleanup_projectiles(mut commands: Commands, entities: Query<Entity, With<Projectile>>) {
+    for projectile in entities.iter() {
+        commands.entity(projectile).despawn();
     }
 }
 
@@ -264,12 +272,20 @@ fn update_target_vectors(
 }
 
 trait BasicGun {
+    /// how long of a cooldown before this weapon can fire again
     fn cooldown(&self) -> f32;
+    /// how much damage the bullet should do
     fn damage(&self) -> i32;
+    /// how fast the projectile should shoot
     fn projectile_velocity(&self) -> f32;
+    /// grab an image handle for the bullet
     fn projectile_sprite(assets: &Res<TextureAssets>) -> Handle<Image>;
+    /// how much longer this gun has before it can fire again
     fn cooldown_remaining(&mut self) -> &mut f32;
+    /// how much health the bullet should have
     fn health(&self) -> i32;
+    /// how long in seconds the bullet should live for
+    fn bullet_lifespan(&self) -> f32;
 }
 
 #[derive(Component)]
@@ -322,6 +338,10 @@ impl BasicGun for MachineGun {
 
     fn health(&self) -> i32 {
         1
+    }
+
+    fn bullet_lifespan(&self) -> f32 {
+        10.0
     }
 }
 
@@ -376,6 +396,10 @@ impl BasicGun for PeaShooter {
     fn health(&self) -> i32 {
         2
     }
+
+    fn bullet_lifespan(&self) -> f32 {
+        10.0
+    }
 }
 
 #[derive(Component)]
@@ -428,6 +452,56 @@ impl BasicGun for Sniper {
 
     fn cooldown_remaining(&mut self) -> &mut f32 {
         &mut self.cooldown_remaining
+    }
+
+    fn bullet_lifespan(&self) -> f32 {
+        10.0
+    }
+}
+
+#[derive(Component)]
+pub(crate) struct Bile {
+    level: u8,
+    cooldown_remaining: f32,
+}
+
+impl Bile {
+    pub(crate) fn new(level: u8) -> Self {
+        Self {
+            level,
+            cooldown_remaining: 0.1,
+        }
+    }
+}
+
+impl BasicGun for Bile {
+    fn cooldown(&self) -> f32 {
+        const COOLDOWNS: &[f32] = &[0.2, 0.15, 0.15, 0.12, 0.1, 0.1];
+        COOLDOWNS.get(self.level as usize).copied().unwrap_or(0.1)
+    }
+
+    fn damage(&self) -> i32 {
+        1
+    }
+
+    fn projectile_velocity(&self) -> f32 {
+        100.0
+    }
+
+    fn projectile_sprite(assets: &Res<TextureAssets>) -> Handle<Image> {
+        assets.bile.clone()
+    }
+
+    fn cooldown_remaining(&mut self) -> &mut f32 {
+        &mut self.cooldown_remaining
+    }
+
+    fn health(&self) -> i32 {
+        1
+    }
+
+    fn bullet_lifespan(&self) -> f32 {
+        0.5
     }
 }
 
@@ -482,7 +556,7 @@ fn shoot_basic_gun<T>(
                                     DespawnTimer(0.2),
                                 ));
                             }))),
-                            DespawnTimer(30.0),
+                            DespawnTimer(gun.bullet_lifespan()),
                             OrientTowardsVelocity,
                         ));
                         if friendly.is_some() {

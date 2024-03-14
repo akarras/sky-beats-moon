@@ -58,4 +58,12 @@ pub struct TextureAssets {
     pub grass: Handle<Image>,
     #[asset(path = "textures/supply_crate.png")]
     pub supply_crate: Handle<Image>,
+    #[asset(path = "textures/mosquito.png")]
+    pub mosquito: Handle<Image>,
+    #[asset(path = "textures/mosquito_dead.png")]
+    pub mosquito_dead: Handle<Image>,
+    #[asset(path = "textures/xp_orb.png")]
+    pub xp_orb: Handle<Image>,
+    #[asset(path = "textures/bile.png")]
+    pub bile: Handle<Image>,
 }
